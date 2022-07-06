@@ -1,8 +1,7 @@
 # didimdol_ai_model
-
   - IIoT 데이터를 활용한 AI 모델 코드 입니다.
   - Target Device : Nivida jetson TX2
-
+ 
 ## 모델 종류
 
 ### 이미지 분류
