@@ -1,6 +1,7 @@
 # didimdol_ai_model
 
-창업디딤돌 과제의 AI 모델 코드 입니다.
+  - IIoT 데이터를 활용한 AI 모델 코드 입니다.
+  - Target Device : Nivida jetson TX2
 
 ## 모델 종류
 
