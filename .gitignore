@@ -3,3 +3,12 @@ dataset/
 log/
 ex_ai_sample/
 didimdol/
+checkpoints/
+check_points/
+core.*
+*.zip
+*.h5
+*.pth
+*.onnx
+*.engine
+*.pyc

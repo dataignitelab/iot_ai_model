@@ -7,30 +7,28 @@ from torchvision import transforms
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']
 
 class ImageDataset(Dataset):
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path, label_names = ['normal', 'defect'], tranform = None):
         self.dataset_path = dataset_path
         self.file_path = []
         self.labels = []
         self.data = []
-        self.label_to_idx = []
-        self.labels_map = {}
+        self.label_idx = []
+        self.label_map = {}
+        self.transform = tranform
+
+        for idx, cls in enumerate(label_names):
+            self.label_map[cls] = idx
 
         _, self.file_path, self.labels = self._getfile_list(dataset_path)
 
-        s = set(self.labels)
-        for index, key in enumerate(s):
-            self.labels_map[key] = index
+        # s = set(self.labels)
+        # for index, key in enumerate(s):
+        #     self.labels_map[key] = index
 
-        self.label_to_idx = [ float(self.labels_map[label]) for label in self.labels ]
-
-        self.data_transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+        self.label_idx = [ float(self.label_map[label]) for label in self.labels ]
 
     def __len__(self):
-        return len(self.labels)    
+        return len(self.file_path)
 
     def _getfile_list(self, path, parent=None):
         file_paths = []
@@ -57,6 +55,6 @@ class ImageDataset(Dataset):
 
         ##img = img[:, :, ::-1].transpose(2, 0, 1)
         img = np.ascontiguousarray(img)
-        img = self.data_transform(img)
-        return img, self.label_to_idx[index]
-
+        if self.transform is not None:
+            img = self.transform(img)
+        return self.file_path[index], img, self.label_idx[index]
