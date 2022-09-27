@@ -37,6 +37,7 @@ class LSTMModel(nn.Module):
     
     # 예측을 위한 함수
     def forward(self, x):
+        # print(x.shape)
         x = x.transpose(1, 2)
         x = self.conv(x)
         x = self.maxpooling(x)

@@ -7,20 +7,20 @@ import torch.nn.functional as F
 import torch
 import re
 import pandas as pd
-from multiprocessing import Queue, Pool, Manager
+# from multiprocessing import Queue, Pool, Manager
+import csv
 
-from .Vibration_Feature_Extractor import Extract_Time_Features, Extract_Freq_Features
+# from Current_Feature_Extractor import Extract_Time_Features, Extract_Freq_Features
 import time
 import pickle
 
-import csv
-
 def load_csv(filename):
-    with open(filename) as f:
+    with open(filename, encoding='utf8') as f:
+        cur = None
         for idx, row in enumerate(f):
             col = row.split(',')
             if idx >= 9: # vib
-                vib[idx - 9] = float(col[1])
+                cur[idx - 9] = col[1:4]
             elif idx == 2: # label name 
                 label_name = col[1].rstrip()
                 # self.labels.append(label_name)
@@ -40,15 +40,15 @@ def load_csv(filename):
             elif idx == 6: #sample rate
                 sample_rate = int(col[1])
             elif idx == 8:
-                vib = np.zeros(int(col[1]))
-    return np.array([vib]), label_name, no, rpm, watt, period, sample_rate,F.one_hot(torch.tensor(no)).float()
+                cur = np.zeros((int(col[1]), 3))
+    return np.array(cur, dtype=np.float32), label_name, no, rpm, watt, period, sample_rate
 
 def convert_csv_to_pk(filename):
     with open(filename) as f:
         for idx, row in enumerate(f):
             col = row.split(',')
             if idx >= 9: # vib
-                vib[idx - 9] = float(col[1])
+                vib[idx - 9] = [float(col[1]), float(col[2]), float(col[3])]
             elif idx == 2: # label name 
                 label_name = col[1].rstrip()
                 # self.labels.append(label_name)
@@ -68,7 +68,7 @@ def convert_csv_to_pk(filename):
             elif idx == 6: #sample rate
                 sample_rate = int(col[1])
             elif idx == 8:
-                vib = np.zeros(int(col[1]))
+                vib = np.zeros(int(col[1]), 3)
     basename = os.path.basename(filename)
 
     with open(os.path.join('dataset/iot_sensor_pickle/', (basename + '_' +str(time.time())+'.pk')), 'wb') as file:
@@ -92,65 +92,43 @@ class ConvertCSVtoPickle():
             async_processes = [p.apply_async(convert_csv_to_pk, (filename, )) for filename in datapath]
             rets = [proc.get() for proc in tqdm(async_processes)]
 
-class VibrationDataset(Dataset):
     
-    def __init__(self, info_path, workers=1, mode='csv'):
-        self.dataset_path = info_path
-        self.file_path = []
-        self.labels = []
-        self.data = []
-        self.idx_of_label = []
-        self.idx_to_label = {}
-        self.rpm = []
-        self.watt = []
-        self.sample_rate = []
-        self.period = []
-        self.one_hot_target = []
-        self.mode = mode
-        self.regex = re.compile('[0-9]')
 
-        with open(info_path) as csvfile:
-            reader = csv.reader(csvfile)
-            next(reader)
-            for row in tqdm(reader):
-                self.file_path.append(row[0])
-                self.labels.append(row[2])
-                self.idx_of_label.append(int(row[3]))
-                self.rpm.append(int(row[4]))
-                self.sample_rate.append(int(row[5]))
-                self.period.append(int(row[6]))
-                self.watt.append(float(row[7]))
+class CurrentDataset(Dataset):
+    
+    def __init__(self, dataset_dir):
+        self.labels = ['normal', 'def_baring', 'rotating_unbalance', 'def_shaft_alignment', 'loose_belt']
+        self.num_classes = len(self.labels)
+        self.dataset_path = dataset_dir
+        self.file_path = glob.glob(dataset_dir, recursive=True)
+        
+#     def loadItem_(self, index):
+#         with open(self.file_path[index], 'rb') as file:
+#             data = pickle.load(file)
+#             x = data['data']
+#             sample_rate = self.sample_rate[index]
+#             class_idx = self.idx_of_label[index]
+#             rpm = self.rpm[index]
 
-                self.idx_to_label[row[3]] = row[2]
-        self.num_classes = len(self.idx_to_label)
-            
+#         x = x - np.expand_dims(np.mean(x,axis=1),axis=1)
+
+#         return torch.tensor(x, dtype=torch.float32), F.one_hot(torch.tensor(class_idx), num_classes=self.num_classes).float()
+
     def loadItem(self, index):
-        sample_rate = self.sample_rate[index]
-        rpm = self.rpm[index]
-        class_idx = self.idx_of_label[index]
-        watt = self.watt[index]
+        x, label_name, class_idx, rpm, watt, period, sample_rate = load_csv(self.file_path[index])
+        # x = np.array(x)
+        x = x - np.expand_dims(np.mean(x,axis=1),axis=1)
 
-        with open(self.file_path[index], 'rb') as file:
-            data = pickle.load(file)
-            x = data['data']
+#         seq_list = []
+#         seq_size = 200
+#         for idx in range(len(x) - seq_size + 1) :
+#             seq_list.append(x[idx:idx+seq_size])
 
-        seq = None
-        for subset in range(0, x.shape[1], sample_rate):
-            tmp = x[0][subset : subset + sample_rate].reshape(1,sample_rate)
-
-            freq = Extract_Freq_Features(tmp, rpm, sample_rate)
-            features1 = freq.Features() # 8
-            time_vib = Extract_Time_Features(tmp)
-            features2 = time_vib.Features() # 9
-            features = np.concatenate([features1, features2, np.array([watt])])
-            features = features.reshape(1, features.shape[0])
-            # print(index, features.shape)
-            if seq is None:
-                seq = features
-            else:
-                seq = np.append(seq, features, axis=0)
-
-        return torch.tensor(seq, dtype=torch.float32), F.one_hot(torch.tensor(class_idx), num_classes = self.num_classes).float()
+#         x = np.array(seq_list)
+        x = x - np.expand_dims(np.mean(x,axis=1),axis=1)
+        
+        # y = [class_idx for _ in range(len(x))]
+        return torch.tensor(x, dtype=torch.float32), F.one_hot(torch.tensor(class_idx), num_classes=self.num_classes).float()
 
 
     def __len__(self):
@@ -161,7 +139,23 @@ class VibrationDataset(Dataset):
         return data, target
 
 if __name__ == "__main__" :
-    import pickle
-
-    path = 'dataset/iot_sensor/vibration/**/**/*.csv'
-    dataset = VibrationDataset(path , workers=6)
+    path = 'dataset/current/train/**/**/*.csv'
+    tmp = glob.glob(path, recursive=True)
+    
+    print('Data cleansing..')
+    error_file = 0
+    for path in tqdm(tmp):
+        try:
+            load_csv(path)
+        except UnicodeDecodeError:
+            error_file += 1
+            os.remove(path)
+                                   
+    print(f'Removed err files : {error_file}')
+    
+    dataset = CurrentDataset(path)
+    print(len(dataset))
+    
+    for x, target in dataset:
+        print(x.shape, target)
+        break
