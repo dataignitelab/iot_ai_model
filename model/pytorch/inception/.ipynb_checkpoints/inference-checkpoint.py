@@ -21,8 +21,8 @@ logger.addHandler(stream_handler)
 if __name__ == '__main__':
     logger.info('model loading..')
     num_classes = 1
-    usb_tensorrt = True
-    model_path = "/content/didimdol/checkpoints/inception/model_state_dict_12_best.pt"
+    usb_tensorrt = False
+    model_path = "check_points/inception/model_state_dict_12_best.pt"
     data_path = "dataset/casting_data/test"
     labels = ["normal", "defect"]
     
@@ -64,6 +64,7 @@ if __name__ == '__main__':
         target = target.to(device)
         output = model(data)
 
+        loss = output[0,0]
         output = 1 if output[0,0] >= 0.5 else 0
         target = int(target[0])
         preds.append(output)
@@ -73,14 +74,14 @@ if __name__ == '__main__':
         elap = time() - start_time
         fps = cnt / elap
 
-        logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}'.format(cnt, total, path[0], labels[output], labels[target], output == target))
+        logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, loss : {}'.format(cnt, total, path[0], labels[output], labels[target], output == target, loss))
 
-        img = cv2.imread(path[0])
+#         img = cv2.imread(path[0])
         
-        cv2.putText(img, 'Result: {}, Correct: {} '.format(labels[output], output == target), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1.5)
-        cv2.putText(img, 'FPS: {:.2f}'.format(fps), (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1.5)
-        cv2.imshow('img', img)
-        cv2.waitKey(1)
+#         cv2.putText(img, 'Result: {}, Correct: {} '.format(labels[output], output == target), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1.5)
+#         cv2.putText(img, 'FPS: {:.2f}'.format(fps), (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1.5)
+#         cv2.imshow('img', img)
+#         cv2.waitKey(1)
 
     cv2.destroyAllWindows()
 

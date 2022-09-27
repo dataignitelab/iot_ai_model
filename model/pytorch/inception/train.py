@@ -12,6 +12,8 @@ from torchvision import transforms
 from model import inceptionv4
 from dataset import ImageDataset
 
+import torch.onnx
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(message)s')

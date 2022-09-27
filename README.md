@@ -19,19 +19,21 @@
 ## 객체 인식 모델
 
 #### 3. Tensorflow 기반 SSD ResNet18
-  - 목적 : 디지털 배전판, 계기판 숫자 인식 (Object Detection, OCR)
+  - 목적 : 디지털 배전판, 계기판 숫자 인식 (Text recongnition)
   - 학습 데이터 : 서버실 디지털 온도계, 습도계, 시계
     - https://www.kaggle.com/datasets/keshavaprasad/svhnvocyolodigitdetector?resource=download
   - 목표 성능치 : 12.8 fps
   
 #### 4. Keras 기반 Yolo3
-  - 목적 : 디지털 배전판, 계기판 숫자 인식 (Object Detection, OCR)
+  - 목적 : 디지털 배전판, 계기판 숫자 인식 (Text recongnition)
   - 학습 데이터 : 서버실 디지털 온도계, 습도계, 시계
     - https://www.kaggle.com/datasets/keshavaprasad/svhnvocyolodigitdetector?resource=download  
   - 목표 성능치 : 20 fps
-  
+
+## 이미지 분할 모델 (Image Segmentation)
+
 #### 5. Caffe 기반 Unet
-  - 목적 : 디지털 배전판, 계기판 숫자 인식 (Object Detection, OCR)
+  - 목적 : 디지털 배전판, 계기판 숫자 인식 (Text recongnition)
   - 학습 데이터 : 서버실 디지털 온도계, 습도계, 시계
     - https://www.kaggle.com/datasets/keshavaprasad/svhnvocyolodigitdetector?resource=download
   - 목표 성능치 : 13.5 fps
