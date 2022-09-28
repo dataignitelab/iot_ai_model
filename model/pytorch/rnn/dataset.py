@@ -6,7 +6,6 @@ from torch.utils.data import Dataset
 import torch.nn.functional as F
 import torch
 import re
-import pandas as pd
 
 from Vibration_Feature_Extractor import Extract_Time_Features, Extract_Freq_Features
 import time
