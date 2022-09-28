@@ -69,11 +69,11 @@ class Dataset():
         return file_names, file_paths, labels
     
     def __getitem__(self, index):
-        img = Image.open(self.file_path[index])
-        img = np.array(img.resize((self.new_size, self.new_size)), dtype=np.float32)
+        org_img = Image.open(self.file_path[index])
+        img = np.array(org_img.resize((self.new_size, self.new_size)), dtype=np.float32)
         img = img * (1/255)
         img = (img - [0.485, 0.456, 0.406]) / np.sqrt([0.229, 0.224, 0.225])
-        return self.file_path[index], img, self.label_idx[index]
+        return self.file_path[index], org_img, img, self.label_idx[index]
 
 
 def str2bool(v):

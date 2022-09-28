@@ -64,13 +64,13 @@ class Dataset():
           ]
         )
         for index in range(len(self.file_path)):
-            org_img = Image.open(self.file_path[index])
-            img = np.array(org_img.resize((self.new_size, self.new_size)), dtype=np.float32)
+            img = Image.open(self.file_path[index])
+            img = np.array(img.resize((self.new_size, self.new_size)), dtype=np.float32)
             
             img = tf.constant(img, dtype=tf.float32)
             img = img_preprocessing(img)
             
-            yield self.file_path[index], org_img, img, self.label_idx[index]
+            yield self.file_path[index], img, self.label_idx[index]
             
 
 def create_batch_generator(data_path, batch_size = 1):
