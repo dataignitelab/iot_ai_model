@@ -226,7 +226,7 @@ def inference(model_path, data_path, display = False):
         logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, fps: {:.1f}'.format(cnt, total, path[0], labels[output], labels[target], output == target, fps))
 
         if(display):
-            img = cv2.cvtColor(numpy.array(org_img), cv2.COLOR_RGB2BGR)
+            img = cv2.cvtColor(np.array(org_img), cv2.COLOR_RGB2BGR)
             cv2.putText(img, 'Result: {}, Correct: {} '.format(labels[output], output == target), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
             cv2.putText(img, 'FPS: {:.2f}'.format(fps), (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
             cv2.imshow('img', img)
