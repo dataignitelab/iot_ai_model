@@ -125,7 +125,6 @@ class CurrentDataset(Dataset):
 #             seq_list.append(x[idx:idx+seq_size])
 
 #         x = np.array(seq_list)
-        x = x - np.expand_dims(np.mean(x,axis=1),axis=1)
         
         # y = [class_idx for _ in range(len(x))]
         return torch.tensor(x, dtype=torch.float32), F.one_hot(torch.tensor(class_idx), num_classes=self.num_classes).float()
@@ -136,7 +135,8 @@ class CurrentDataset(Dataset):
 
     def __getitem__(self, index):
         data, target = self.loadItem(index)
-        return data, target
+        # print(data.shape, target.shape)
+        return self.file_path[index], data, target
 
 if __name__ == "__main__" :
     path = 'dataset/current/train/**/**/*.csv'

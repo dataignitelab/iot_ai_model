@@ -143,7 +143,7 @@ class VibrationDataset(Dataset):
 
     def __getitem__(self, index):
         data, target = self.loadItem(index)
-        return data, target
+        return self.file_path[index], data, target
 
 if __name__ == "__main__" :
     path = 'dataset/vibration/train/**/**/*.csv'

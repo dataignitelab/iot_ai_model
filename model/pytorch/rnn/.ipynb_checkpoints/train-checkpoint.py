@@ -18,7 +18,7 @@ from model import RNNModel
 
 logger = logging.getLogger('train_log')
 
-checkpoints_path = "check_points/rnn/"
+checkpoints_path = "check_points/rnn"
 
 def print_log(text):
     logger.info(text)
@@ -58,7 +58,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
 
         model.train()
         for samples in progress:
-            x_train, y_train = samples
+            _, x_train, y_train = samples
             
             x_train = x_train.to(device)
             y_train = y_train.to(device)
@@ -112,7 +112,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         model.eval()
         with torch.no_grad():
             for samples in progress:
-                x_train, y_train = samples
+                _, x_train, y_train = samples
             
                 x_train = x_train.to(device)
                 y_train = y_train.to(device)
@@ -131,22 +131,22 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         f1 = f1socre(preds.to('cpu'), targets.to('cpu'))
         avg_cost = avg_cost / total_batch
         
-        if avg_cost >= min_loss:
-            early_count += 1
-            if early_count >= early_stopping:
-                break
-        else:
-            min_loss = avg_cost
-            early_count = 0
-
-        v_loss_hist[epoch] = avg_cost 
-        v_f1_hist[epoch] = f1
+        # if avg_cost >= min_loss:
+        #     early_count += 1
+        #     if early_count >= early_stopping:
+        #         break
+        # else:
+        #     min_loss = avg_cost
+        #     early_count = 0
 
         if len(v_f1_hist) > 0 and max(v_f1_hist) < f1:
             save_path = f'{checkpoints_path}/model_state_dict_best.pt'
             logger.info(f'best f1! save model. {save_path}')
             torch.save(model.state_dict(), save_path)
-
+        
+        v_loss_hist[epoch] = avg_cost 
+        v_f1_hist[epoch] = f1
+            
         logger.info('val Epoch:{:3d}, time : {:.2f}, loss : {:.4f}, f1-score : {:.4f}'
             .format(
                 epoch+1, 
@@ -261,7 +261,7 @@ if __name__ == "__main__" :
     if not os.path.exists(checkpoints_path):
         os.makedirs(checkpoints_path)
 
-    logging_path = "{}train.log".format(checkpoints_path)
+    logging_path = "{}/train.log".format(checkpoints_path)
     fh = logging.FileHandler(filename=logging_path)
     fh.setLevel(logging.INFO)
     logger.addHandler(ch)

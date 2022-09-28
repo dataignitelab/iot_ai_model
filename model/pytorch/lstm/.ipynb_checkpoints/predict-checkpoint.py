@@ -1,16 +1,16 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader 
 
 import numpy as np
+from torch.utils.data import DataLoader 
 import time
 from tqdm import tqdm
 import logging
 import os
 import torchmetrics
 
-from dataset import VibrationDataset
-from model import RNNModel
+from dataset import CurrentDataset
+from model import LSTMModel
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -20,18 +20,18 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 if __name__ == '__main__':
-    model_path = "check_points/rnn/model_state_dict_best.pt"
     labels = ['normal', 'def_baring', 'rotating_unbalance', 'def_shaft_alignment', 'loose_belt']
+    model_path = "check_points/lstm/model_state_dict_best.pt"
     num_classes = len(labels)
     use_cpu = False
     
     device = torch.device("cuda" if (use_cpu) and torch.cuda.is_available() else "cpu")
-    model = RNNModel(18, 8, 3, 5, 2).to(device)
+    model = LSTMModel().to(device)
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
-    path = 'dataset/vibration/test/**/*.csv'
-    dataset = VibrationDataset(path)
+    path = 'dataset/current/test/**/*.csv'
+    dataset = CurrentDataset(path)
     total = len(dataset)
     dataloader = DataLoader(dataset,
                             batch_size=1,
@@ -41,10 +41,12 @@ if __name__ == '__main__':
     
     preds = torch.tensor([],dtype= torch.int16).to(device)
     targets = torch.tensor([],dtype= torch.int16).to(device)
+
     
+    criterion = nn.CrossEntropyLoss()
     f1socre = torchmetrics.F1Score(num_classes = num_classes)
     cm = torchmetrics.ConfusionMatrix(num_classes = num_classes)
-    criterion = nn.CrossEntropyLoss()
+    
     avg_cost = .0
     cnt = 0
     start_time = time.time()
@@ -66,7 +68,7 @@ if __name__ == '__main__':
             y = torch.max(y_train.data, 1)[1]
 
             preds = torch.cat([preds, out])
-            targets = torch.cat([targets, y])  
+            targets = torch.cat([targets, y])
             
             logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, loss : {:.4f}'.format(cnt, total, file_path[0], labels[out[0]], labels[y[0]], out[0] == y[0], loss))
     

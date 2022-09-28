@@ -13,19 +13,19 @@ import os
 import torchmetrics
 from torch.utils.data.dataset import random_split
 
-from dataset import VibrationDataset
-from model import RNNModel
+from utils.vibrationdataset_2 import VibrationDataset
+from model.RNNModel import RNNModel
 
 logger = logging.getLogger('train_log')
 
-checkpoints_path = "check_points/rnn"
+info_file_path = 'didimdol/vibration_info.csv'
 
 def print_log(text):
     logger.info(text)
 
 def str2bool(v):
     if isinstance(v, bool):
-        return v
+       return v
     if v.lower() in ('true', '1'):
         return True
     elif v.lower() in ('false', '0'):
@@ -39,14 +39,11 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
     v_loss_hist = np.zeros(num_epochs)
     v_f1_hist = np.zeros(num_epochs)
 
-    num_classes = 5
+    num_classes = train_loader.dataset.dataset.num_classes
 
     f1socre = torchmetrics.F1Score(num_classes = num_classes)
     cm = torchmetrics.ConfusionMatrix(num_classes = num_classes)
 
-    early_stopping = 5
-    min_loss = 99999.
-    early_count = 0
     for epoch in range(num_epochs):
         preds = torch.tensor([],dtype= torch.int16).to(device)
         targets = torch.tensor([],dtype= torch.int16).to(device)
@@ -58,7 +55,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
 
         model.train()
         for samples in progress:
-            _, x_train, y_train = samples
+            x_train, y_train = samples
             
             x_train = x_train.to(device)
             y_train = y_train.to(device)
@@ -110,9 +107,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         total_batch = len(train_loader)
 
         model.eval()
-        with torch.no_grad():
+        with torch.no_grad() :
             for samples in progress:
-                _, x_train, y_train = samples
+                x_train, y_train = samples
             
                 x_train = x_train.to(device)
                 y_train = y_train.to(device)
@@ -130,23 +127,10 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
 
         f1 = f1socre(preds.to('cpu'), targets.to('cpu'))
         avg_cost = avg_cost / total_batch
-        
-        # if avg_cost >= min_loss:
-        #     early_count += 1
-        #     if early_count >= early_stopping:
-        #         break
-        # else:
-        #     min_loss = avg_cost
-        #     early_count = 0
 
-        if len(v_f1_hist) > 0 and max(v_f1_hist) < f1:
-            save_path = f'{checkpoints_path}/model_state_dict_best.pt'
-            logger.info(f'best f1! save model. {save_path}')
-            torch.save(model.state_dict(), save_path)
-        
         v_loss_hist[epoch] = avg_cost 
         v_f1_hist[epoch] = f1
-            
+
         logger.info('val Epoch:{:3d}, time : {:.2f}, loss : {:.4f}, f1-score : {:.4f}'
             .format(
                 epoch+1, 
@@ -157,7 +141,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         )
 
     # validation matric
-    logger.info(cm(preds.cpu(), targets.cpu()))
+    logger.info(cm(preds, targets))
 
     return t_loss_hist, t_f1_hist, v_loss_hist, v_f1_hist
 
@@ -168,7 +152,7 @@ if __name__ == "__main__" :
     start_time = time.time()
 
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--name', dest='name', type=str, default='rnn')
+    parser.add_argument('--name', dest='name', type=str, default='didimdol_rnn')
     parser.add_argument('--seed', dest='random_seed', type=int, default=45)
     parser.add_argument('--lr', dest='lr', type=float, default=0.01)
     parser.add_argument('--epochs', dest='epochs', type=int, default=50)
@@ -230,14 +214,12 @@ if __name__ == "__main__" :
     device = torch.device("cuda" if (not args.use_cpu) and torch.cuda.is_available() else "cpu")
 
     # path = 'dataset/iot_sensor_pickle/*.pk'
-    # dataset = VibrationDataset(info_file_path)
-    
-    path = 'dataset/vibration/train/**/*.csv'
-    dataset = VibrationDataset(path)
+    dataset = VibrationDataset(info_file_path)
 
-    training_size = int(len(dataset) * 0.8)
+    training_size = int(len(dataset) * 0.7)
     valid_size = len(dataset) - training_size
-    trn_dataset, val_dataset = random_split(dataset, [training_size, valid_size], generator = torch.Generator().manual_seed(random_seed))
+    trn_dataset, val_dataset = random_split(dataset, [training_size, valid_size], generator=torch.Generator().manual_seed(random_seed))
+
 
     trn_dataloader = DataLoader(trn_dataset,
                             batch_size=batch_size,
@@ -258,10 +240,12 @@ if __name__ == "__main__" :
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
 
-    if not os.path.exists(checkpoints_path):
-        os.makedirs(checkpoints_path)
+    model_save_path = "didimdol/log/{}/{:.0f}/".format(training_name, start_time)
 
-    logging_path = "{}/train.log".format(checkpoints_path)
+    if not os.path.exists(model_save_path):
+        os.makedirs(model_save_path)
+
+    logging_path = "{}train.log".format(model_save_path)
     fh = logging.FileHandler(filename=logging_path)
     fh.setLevel(logging.INFO)
     logger.addHandler(ch)
@@ -270,8 +254,6 @@ if __name__ == "__main__" :
     logger.info('logging file path : {}'.format(logging_path))
     logger.info('training device : {}'.format(device))
     logger.info(args)
-    
-    logger.info('data size - trn : {}, val : {}'.format(training_size, valid_size))
 
     model = RNNModel(input_dim, hidden_dim, seq, output_dim, layers).to(device)  
     criterion = nn.CrossEntropyLoss()

@@ -18,7 +18,8 @@ from model import LSTMModel
 
 logger = logging.getLogger('train_log')
 
-checkpoints_path = "check_points/lstm/"
+checkpoints_path = "check_points/lstm"
+model_path = f'{checkpoints_path}/model_state_dict_best.pt'
 
 def print_log(text):
     logger.info(text)
@@ -58,7 +59,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
 
         model.train()
         for samples in progress:
-            x_train, y_train = samples
+            file_path, x_train, y_train = samples
             
             x_train = x_train.to(device)
             y_train = y_train.to(device)
@@ -110,8 +111,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         model.eval()
         with torch.no_grad() :
             for samples in progress:
-                x_train, y_train = samples
-                print(x_train.shape,  y_train.shape)
+                file_path, x_train, y_train = samples
             
                 x_train = x_train.to(device)
                 y_train = y_train.to(device)
@@ -130,21 +130,21 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         f1 = f1socre(preds.to('cpu'), targets.to('cpu'))
         avg_cost = avg_cost / total_batch
         
-        if avg_cost >= min_loss:
-            early_count += 1
-            if early_count >= early_stopping:
-                break
-        else:
-            min_loss = avg_cost
-            early_count = 0
+        # if avg_cost >= min_loss:
+        #     early_count += 1
+        #     if early_count >= early_stopping:
+        #         break
+        # else:
+        #     min_loss = avg_cost
+        #     early_count = 0
 
-        v_loss_hist[epoch] = avg_cost 
-        v_f1_hist[epoch] = f1
-        
         if len(v_f1_hist) > 0 and max(v_f1_hist) < f1:
-            save_path = f'{checkpoints_path}/model_state_dict_best.pt'
+            save_path = model_path
             logger.info(f'best f1! save model. {save_path}')
             torch.save(model.state_dict(), save_path)
+            
+        v_loss_hist[epoch] = avg_cost 
+        v_f1_hist[epoch] = f1
 
         logger.info('val Epoch:{:3d}, time : {:.2f}, loss : {:.4f}, f1-score : {:.4f}'
             .format(
@@ -203,7 +203,7 @@ if __name__ == "__main__" :
     path = 'dataset/current/train/**/*.csv'
     dataset = CurrentDataset(path)
 
-    training_size = int(len(dataset) * 0.7)
+    training_size = int(len(dataset) * 0.8)
     valid_size = len(dataset) - training_size
     trn_dataset, val_dataset = random_split(dataset, [training_size, valid_size], generator = torch.Generator().manual_seed(random_seed))
 
@@ -231,7 +231,7 @@ if __name__ == "__main__" :
     if not os.path.exists(checkpoints_path):
         os.makedirs(checkpoints_path)
 
-    logging_path = "{}train.log".format(checkpoints_path)
+    logging_path = "{}/train.log".format(checkpoints_path)
     fh = logging.FileHandler(filename=logging_path)
     fh.setLevel(logging.INFO)
     logger.addHandler(ch)
@@ -240,10 +240,13 @@ if __name__ == "__main__" :
     logger.info('logging file path : {}'.format(logging_path))
     logger.info('training device : {}'.format(device))
     logger.info(args)
-    
     logger.info('data size - trn : {}, val : {}'.format(training_size, valid_size))
 
     model = LSTMModel().to(device)  
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr = lr)
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
+        logger.info(f'loaded weight: {model_path}')
+    
     train_hist = train_model(model, trn_dataloader, val_dataloader, criterion, optimizer, num_epochs = epochs)
