@@ -9,7 +9,6 @@ from torchmetrics import F1Score
 from model import inceptionv4
 from dataset import ImageDataset
 from torchvision import transforms 
-from torch2trt import torch2trt, TRTModule
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -30,13 +29,8 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = inceptionv4(num_classes = num_classes).to(device)
     model.load_state_dict(torch.load(model_path))
-
     model.eval()
     
-    if usb_tensorrt:
-        logger.info('tensorrt converting..')
-        x = torch.ones((1,3,224,224)).cuda()
-        model = torch2trt(model, [x], use_onnx=True)
 
     logger.info('dataset loading..')
     tranform = transforms.Compose([
