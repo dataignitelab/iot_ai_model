@@ -14,6 +14,28 @@ from model.tensorflow.yolo.config import cfg
 # XYSCALE = cfg.YOLO.XYSCALE
 # ANCHORS = utils.get_anchors(cfg.YOLO.ANCHORS)
 
+
+def createModel(num_class, input_size, strides, anchors, xyscale):
+    input_layer = tf.keras.layers.Input([input_size, input_size, 3])
+
+    feature_maps = YOLO(input_layer, num_class, is_tiny = True)
+    bbox_tensors = []
+    for i, fm in enumerate(feature_maps):
+        if i == 0:
+            bbox_tensor = decode_train(fm, input_size // 16, num_class, strides, anchors, i, xyscale)
+        elif i == 1:
+            bbox_tensor = decode_train(fm, input_size // 32, num_class, strides, anchors, i, xyscale)
+        # else:
+        #     bbox_tensor = decode_train(fm, INPUT_SIZE // 32, NUM_CLASS, STRIDES, ANCHORS, i, XYSCALE)
+
+        bbox_tensors.append(fm)
+        bbox_tensors.append(bbox_tensor)
+
+    model = tf.keras.Model(input_layer, bbox_tensors)
+    
+    return model
+
+
 def YOLO(input_layer, NUM_CLASS, model='yolov4', is_tiny=False):
     if is_tiny:
         if model == 'yolov4':

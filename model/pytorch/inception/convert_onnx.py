@@ -30,7 +30,7 @@ if __name__ == '__main__':
     
     checkpoints_path = 'check_points/inception'
     model_path = f"{checkpoints_path}/model_state_dict_12_best.pt"
-    output = 'check_points/inception/inceptionv4.onnx'
+    output = 'check_points/inception/model.onnx'
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = inceptionv4(num_classes = 1).to(device)

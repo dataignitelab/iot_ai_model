@@ -204,7 +204,7 @@ def inference(model_path, data_path, display = False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Inceptionv4')
     
-    parser.add_argument('--model-path', dest='model_path', type=str, default='inceptionv4_trt.engine')
+    parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/inception/model.engine')
     parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/casting_data/test')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
     

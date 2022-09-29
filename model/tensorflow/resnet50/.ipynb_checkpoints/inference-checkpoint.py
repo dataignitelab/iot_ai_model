@@ -1,6 +1,8 @@
 import tensorflow as tf
 
-from model import resnet50
+# from model import resnet50
+from model import resnet_50
+
 from dataset import create_batch_generator
 
 import logging
@@ -16,7 +18,9 @@ logger.addHandler(stream_handler)
 if __name__ == '__main__':
     labels = ['defect', 'normal']
     
-    model = tf.keras.models.load_model('check_points/resnet50/model.h5')
+    model = resnet_50(num_classes=1)
+    model.load_weights(filepath='check_points/resnet50/lite/')
+    # model = tf.keras.models.load_model('check_points/resnet50/model.h5')
     
     
     gen, total = create_batch_generator('dataset/casting_data/test')
@@ -27,7 +31,7 @@ if __name__ == '__main__':
     targets = []
     cnt = 0
     for path, img, target in gen:
-        output = model(img)
+        output = model(img, training=False)
         
         # loss = output[0][0]
         output = 1 if output[0][0] >= 0.5 else 0
