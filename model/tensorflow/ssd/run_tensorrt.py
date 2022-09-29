@@ -1,6 +1,14 @@
+
+import os
+import numpy as np
+# import tensorflow as tf
+from PIL import Image
+
 import tensorrt as trt
 import pycuda.driver as cuda
 import pycuda.autoinit
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import torch
 from torchvision import transforms 
@@ -8,7 +16,7 @@ from torchmetrics import F1Score
 import logging
 
 import argparse
-# import tensorflow as tf
+import tensorflow as tf
 import os
 import sys
 import numpy as np
@@ -16,13 +24,16 @@ import yaml
 from tqdm import tqdm
 
 from anchor import generate_default_boxes
-from box_utils import decode, compute_nms
-from voc_data import create_batch_generator
+from box_utils_numpy import decode, compute_nms
+from voc_data import VOCDataset
 from image_utils import ImageVisualizer
 from losses import create_losses
 from network import create_ssd
 from PIL import Image
 
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -30,13 +41,6 @@ formatter = logging.Formatter('%(asctime)s - %(message)s')
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
-
-
-import os
-import numpy as np
-# import tensorflow as tf
-from PIL import Image
-# from model.tensorflow.yolo.config import cfg
 
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']
 
@@ -53,7 +57,20 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+def softmax(x, axis=1):
+    max = np.max(x,axis=axis,keepdims=True) #returns max of each row and keeps same dims
+    e_x = np.exp(x - max) #subtracts each row with its max value
+    sum = np.sum(e_x,axis=axis,keepdims=True) #returns sum of each row and keeps same dims
+    f_x = e_x / sum 
+    return f_x
 
+# def softmax(x):
+
+#     y = np.exp(x - np.max(x))
+#     f_x = y / np.sum(np.exp(x))
+#     return f_x
+        
+        
 class HostDeviceMem(object):
     def __init__(self, host_mem, device_mem):
         self.host = host_mem
@@ -111,7 +128,7 @@ class TrtModel:
         return inputs, outputs, bindings, stream
        
             
-    def __call__(self,x:np.ndarray, batch_size=1):
+    def __call__(self,x:np.ndarray,batch_size=1):
         
         x = x.astype(self.dtype)
         
@@ -133,9 +150,10 @@ def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
     labels = ["defect", "normal"]
     batch_size = 1
-     # os.path.join("..","models","main.trt")
+    
     model = TrtModel(model_path)
     shape = model.engine.get_binding_shape(0)
+    
     
     with open('model/tensorflow/ssd/config.yml') as f:
         cfg = yaml.load(f, Loader=yaml.Loader)
@@ -144,19 +162,67 @@ def inference(model_path, data_path, display = False):
         config = cfg[args.arch.upper()]
     except AttributeError:
         raise ValueError('Unknown architecture: {}'.format(args.arch))
-
-    default_boxes = generate_default_boxes(config)
-
-    batch_generator, info = create_batch_generator(
-        args.anno_path, default_boxes,
-        config['image_size'],
-        BATCH_SIZE, args.num_examples, mode='test', augmentation = False)
     
+    use_tensor = False
+    default_boxes = generate_default_boxes(config, use_tensor = use_tensor)
     
-    progress = tqdm(batch_generator, total=info['length'], desc='Testing...', unit='images')
-    for i, (filename, imgs, gt_confs, gt_locs) in enumerate(progress):
-        imgs = imgs.numpy()
-        model(imgs)
+    voc = VOCDataset(data_path, default_boxes,
+                     config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
+    
+    visualizer = ImageVisualizer(['0','1','2','3','4','5','6','7','8','9'], save_dir='check_points/ssd/outputs/images')
+    
+    idx = 0
+    for filename, img, gt_confs, gt_locs in tqdm(voc.generate()):
+        img = np.expand_dims(img, 0)
+        confs, locs = model(img)
+        
+        confs = np.squeeze(confs, 0)
+        locs = np.squeeze(locs, 0)
+        
+        confs = confs.reshape((8732, 11))
+        locs = locs.reshape((8732, 4))
+        
+        confs = softmax(confs)
+        classes = np.argmax(confs, axis=-1)
+        scores = np.max(confs, axis=-1)
+        
+        boxes = decode(default_boxes, locs)
+        
+        out_boxes = []
+        out_labels = []
+        out_scores = []
+
+        for c in range(1, NUM_CLASSES):
+            cls_scores = confs[:, c]
+
+            score_idx = cls_scores > 0.2
+            
+            cls_boxes = boxes[score_idx]
+            cls_scores = cls_scores[score_idx]
+
+            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 200)
+            cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
+            cls_scores = np.take(cls_scores, nms_idx, axis=0)
+            cls_labels = [c] * cls_boxes.shape[0]
+
+            out_boxes.append(cls_boxes)
+            out_labels.extend(cls_labels)
+            out_scores.append(cls_scores)
+
+        out_boxes = np.concatenate(out_boxes, axis=0)
+        out_scores = np.concatenate(out_scores, axis=0)
+
+        boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
+        classes = np.array(out_labels)
+        scores = out_scores
+        
+        original_image = Image.open(filename)
+        boxes *= original_image.size * 2
+        # break
+        visualizer.save_image(original_image, boxes, classes, '{:d}'.format(idx))
+        idx = idx + 1
+        
+        if (len(voc) == (idx+1)): break
     
     # data_paths = glob(dataset_path)
     
@@ -222,7 +288,7 @@ def inference(model_path, data_path, display = False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='resnet50')
     parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/ssd/model.engine')
-    parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/casting_data/test')
+    # parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/casting_data/test')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
     parser.add_argument('--anno-path', default='dataset/server_room/test_digit.txt')
     parser.add_argument('--arch', default='ssd300')
@@ -232,4 +298,4 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     logger.info(args)
-    inference(args.model_path, args.data_path, args.display)
+    inference(args.model_path, args.anno_path, args.display)

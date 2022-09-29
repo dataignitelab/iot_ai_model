@@ -33,7 +33,9 @@ BATCH_SIZE = 1
 
 
 def predict(imgs, default_boxes):
+    print(imgs.shape)
     confs, locs = ssd(imgs)
+    print(confs.shape, locs.shape)
 
     confs = tf.squeeze(confs, 0)
     locs = tf.squeeze(locs, 0)
@@ -117,6 +119,7 @@ if __name__ == '__main__':
         filename = filename[0].numpy().decode()
         original_image = Image.open(filename)
         boxes *= original_image.size * 2
+        break
         # visualizer.save_image(original_image, boxes, classes, '{:d}'.format(i))
 
 #         log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')

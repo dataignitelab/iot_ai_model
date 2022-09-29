@@ -1,9 +1,10 @@
 import itertools
 import math
 import tensorflow as tf
+import numpy as np
 
 
-def generate_default_boxes(config):
+def generate_default_boxes(config, use_tensor = True):
     """ Generate default boxes for all feature maps
 
     Args:
@@ -55,8 +56,11 @@ def generate_default_boxes(config):
                     scales[m] * r
                 ])
 
-    default_boxes = tf.constant(default_boxes)
-    default_boxes = tf.clip_by_value(default_boxes, 0.0, 1.0)
+    if use_tensor:
+        default_boxes = tf.constant(default_boxes)
+        default_boxes = tf.clip_by_value(default_boxes, 0.0, 1.0)
+    else:
+        default_boxes = np.minimum(np.maximum(default_boxes, 0.0), 1.0)
 
     return default_boxes
 

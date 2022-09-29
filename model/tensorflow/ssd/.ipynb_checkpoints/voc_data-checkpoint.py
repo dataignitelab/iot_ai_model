@@ -5,7 +5,8 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 import random
 
-from box_utils import compute_target
+from box_utils import compute_target 
+from box_utils_numpy import compute_target as compute_target_numpy
 from image_utils import random_resize, random_translate
 from functools import partial
 
@@ -21,7 +22,7 @@ class VOCDataset():
     """
 
     def __init__(self, data_anno_path, default_boxes,
-                 new_size, num_examples=-1, augmentation=True):
+                 new_size, num_examples=-1, augmentation=True, use_tensor = True):
         super(VOCDataset, self).__init__()
         self.idx_to_name = ['0','1','2','3','4','5','6','7','8','9']
         self.name_to_idx = dict([(v, k) for k, v in enumerate(self.idx_to_name)])
@@ -54,6 +55,7 @@ class VOCDataset():
         # else:
         #     self.augmentation = augmentation + ['original']
         self.augmentation = augmentation
+        self.use_tensor = use_tensor
 
     def __len__(self):
         return len(self.ids)
@@ -148,19 +150,19 @@ class VOCDataset():
             #     img, boxes, labels = horizontal_flip(img, boxes, labels)
             # elif(
             
-            boxes = tf.constant(boxes, dtype=tf.float32)
-            labels = tf.constant(labels, dtype=tf.int64)
+            if self.use_tensor == True:
+                boxes = tf.constant(boxes, dtype=tf.float32)
+                labels = tf.constant(labels, dtype=tf.int64)
 
             img = np.array(img.resize(
                 (self.new_size, self.new_size)), dtype=np.float32)
             img = (img / 127.0) - 1.0
-            img = tf.constant(img, dtype=tf.float32)
-
-            # print(boxes, labels)
             
-            gt_confs, gt_locs = compute_target(self.default_boxes, boxes, labels)
-            
-            # print(gt_confs[:,)
+            if self.use_tensor == True:
+                img = tf.constant(img, dtype=tf.float32)
+                gt_confs, gt_locs = compute_target(self.default_boxes, boxes, labels)
+            else:
+                gt_confs, gt_locs = compute_target_numpy(self.default_boxes, boxes, labels)
             
             yield filename, img, gt_confs, gt_locs
 

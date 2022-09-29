@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+import numpy as np
 
 def compute_area(top_left, bot_right):
     """ Compute area given top_left and bottom_right coordinates
@@ -39,8 +39,7 @@ def compute_iou(boxes_a, boxes_b):
 
     overlap = overlap_area / (area_a + area_b - overlap_area)
 
-    return overlap
-
+    return overlap    
 
 def compute_target(default_boxes, gt_boxes, gt_labels, iou_threshold=0.40):
     """ Compute regression and classification targets
@@ -95,7 +94,6 @@ def compute_target(default_boxes, gt_boxes, gt_labels, iou_threshold=0.40):
     
     # for l in gt_labels:
     #     print(l, len(gt_confs[gt_confs == l]))
-
     gt_boxes = tf.gather(gt_boxes, best_gt_idx)
     gt_locs = encode(default_boxes, gt_boxes)
 
