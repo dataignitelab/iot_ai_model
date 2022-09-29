@@ -8,7 +8,7 @@ from torchmetrics import F1Score
 import logging
 
 import argparse
-import tensorflow as tf
+# import tensorflow as tf
 import os
 import sys
 import numpy as np
@@ -42,50 +42,6 @@ img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']
 
 NUM_CLASSES = 11
 BATCH_SIZE = 1
-
-class Dataset():
-    """implement Dataset here"""
-
-    def __init__(self, data_path, label_names = ['defect', 'normal']):
-        self.data_path = data_path
-        self.new_size = 224
-        self.label_map = {}
-        
-        for idx, cls in enumerate(label_names):
-            self.label_map[cls] = idx
-
-        _, self.file_path, self.labels = self._getfile_list(data_path)
-        self.label_idx = [ float(self.label_map[label]) for label in self.labels ]
-
-    def __len__(self):
-        return len(self.file_path)
-    
-    def _getfile_list(self, path, parent=None):
-        file_paths = []
-        file_names = []
-        labels = []
-        for filename in os.listdir(path):
-            fullpath = os.path.join(path, filename)
-            format = filename.split('.')[-1].lower()
-            if os.path.isfile(fullpath):
-                if (parent is not None) and (format in img_formats):
-                    file_paths.append(fullpath)
-                    file_names.append(filename)
-                    labels.append(parent)
-            else:
-                f, p, l = self._getfile_list(fullpath, filename)
-                file_names += f
-                file_paths += p
-                labels += l
-        return file_names, file_paths, labels
-    
-    def __getitem__(self, index):
-        org_img = Image.open(self.file_path[index])
-        img = np.array(org_img.resize((self.new_size, self.new_size)), dtype=np.float32)
-        img = img * (1/255)
-        img = (img - [0.485, 0.456, 0.406]) / np.sqrt([0.229, 0.224, 0.225])
-        return self.file_path[index], org_img, img, self.label_idx[index]
-
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -155,7 +111,7 @@ class TrtModel:
         return inputs, outputs, bindings, stream
        
             
-    def __call__(self,x:np.ndarray,batch_size=2):
+    def __call__(self,x:np.ndarray, batch_size=1):
         
         x = x.astype(self.dtype)
         
