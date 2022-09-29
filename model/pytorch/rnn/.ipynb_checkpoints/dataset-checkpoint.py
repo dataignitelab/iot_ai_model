@@ -3,7 +3,7 @@ import os
 from tqdm import tqdm
 import numpy as np
 from torch.utils.data import Dataset
-from torch.nn.functional.F import one_hot
+from torch.nn.functional import one_hot
 import torch
 import re
 

@@ -3,7 +3,7 @@ import os
 from tqdm import tqdm
 import numpy as np
 from torch.utils.data import Dataset
-import torch.nn.functional as F
+from torch.nn.functional import one_hot
 import torch
 import re
 import csv
@@ -49,7 +49,7 @@ class CurrentDataset(Dataset):
         x, label_name, class_idx, rpm, watt, period, sample_rate = load_csv(self.file_path[index])
         # x = np.array(x)
         x = x - np.expand_dims(np.mean(x,axis=1),axis=1)
-        return torch.tensor(x, dtype=torch.float32), F.one_hot(torch.tensor(class_idx), num_classes=self.num_classes).float()
+        return torch.tensor(x, dtype=torch.float32), one_hot(torch.tensor(class_idx), num_classes=self.num_classes).float()
 
     def __len__(self):
         return len(self.file_path)    
@@ -58,6 +58,7 @@ class CurrentDataset(Dataset):
         data, target = self.loadItem(index)
         return self.file_path[index], data, target
 
+    
 if __name__ == "__main__" :
     path = 'dataset/current/train/**/**/*.csv'
     tmp = glob.glob(path, recursive=True)

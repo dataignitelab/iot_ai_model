@@ -28,6 +28,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LSTMModel().to(device)
     model.load_state_dict(torch.load(model_path))
+    model.half()
     model.eval()
 
     path = 'dataset/current/test/**/*.csv'
@@ -51,14 +52,14 @@ if __name__ == '__main__':
     cnt = 0
     start_time = time.time()
     
-    print(device)
+    logger.info('loaded {device}')
     with torch.no_grad():
         # progress = tqdm(dataloader)
         for samples in dataloader:
             cnt+=1
             file_path, x_train, y_train = samples
 
-            x_train = x_train.to(device)
+            x_train = x_train.half().to(device)
             y_train = y_train.to(device)
 
             # H(x) 계산

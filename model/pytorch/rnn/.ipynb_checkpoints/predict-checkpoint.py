@@ -25,8 +25,8 @@ if __name__ == '__main__':
     num_classes = len(labels)
     use_cpu = False
     
-    device = torch.device("cuda" if (use_cpu) and torch.cuda.is_available() else "cpu")
-    model = RNNModel(18, 8, 3, 5, 2).to(device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = RNNModel(18, 8, 3, 5, 2).half().to(device)
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
@@ -54,7 +54,7 @@ if __name__ == '__main__':
             cnt+=1
             file_path, x_train, y_train = samples
 
-            x_train = x_train.to(device)
+            x_train = x_train.half().to(device)
             y_train = y_train.to(device)
 
             # H(x) 계산
