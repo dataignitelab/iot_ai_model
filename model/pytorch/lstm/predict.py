@@ -25,7 +25,7 @@ if __name__ == '__main__':
     num_classes = len(labels)
     use_cpu = False
     
-    device = torch.device("cuda" if (use_cpu) and torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LSTMModel().to(device)
     model.load_state_dict(torch.load(model_path))
     model.eval()
@@ -50,6 +50,8 @@ if __name__ == '__main__':
     avg_cost = .0
     cnt = 0
     start_time = time.time()
+    
+    print(device)
     with torch.no_grad():
         # progress = tqdm(dataloader)
         for samples in dataloader:

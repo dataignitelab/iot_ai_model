@@ -105,7 +105,7 @@ def make_bottleneck_layer(filter_num, blocks, stride=1):
     return res_block
 
 class ResNet(tf.keras.Model):
-    def __init__(self, layer_params, num_classes=1):
+    def __init__(self, layer_params, num_classes=1): # 모델 경량화를 위하여 Layer 개수는 유지하되 filter를 기존 대비 1/4로 축소함
         super(ResNet, self).__init__()
         self.conv1 = tf.keras.layers.Conv2D(filters=32,
                                             kernel_size=(7, 7),
