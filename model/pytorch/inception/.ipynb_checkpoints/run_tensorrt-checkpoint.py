@@ -77,8 +77,7 @@ class TrtModel:
         self.inputs, self.outputs, self.bindings, self.stream = self.allocate_buffers()
         self.context = self.engine.create_execution_context()
 
-                
-                
+        
     @staticmethod
     def load_engine(trt_runtime, engine_path):
         trt.init_libnvinfer_plugins(None, "")
@@ -87,6 +86,7 @@ class TrtModel:
             engine_data = f.read()
         engine = trt_runtime.deserialize_cuda_engine(engine_data)
         return engine
+    
     
     def allocate_buffers(self):
         

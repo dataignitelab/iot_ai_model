@@ -17,11 +17,11 @@ def generate_default_boxes(config):
                        with format (cx, cy, w, h)
     """
     default_boxes = []
-    scales = config['scales']
-    fm_sizes = config['fm_sizes']
-    ratios = config['ratios']
+    scales = config['scales'] # [0.1, 0.2, 0.375, 0.55, 0.725, 0.9, 1.075]
+    fm_sizes = config['fm_sizes'] # [38, 19, 10, 5, 3, 1]
+    ratios = config['ratios'] # [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
 
-    for m, fm_size in enumerate(fm_sizes):
+    for m, fm_size in enumerate(fm_sizes): 
         for i, j in itertools.product(range(fm_size), repeat=2):
             cx = (j + 0.5) / fm_size
             cy = (i + 0.5) / fm_size

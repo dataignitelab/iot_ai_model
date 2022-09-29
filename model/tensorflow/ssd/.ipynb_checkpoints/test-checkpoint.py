@@ -18,7 +18,7 @@ from PIL import Image
 parser = argparse.ArgumentParser()
 parser.add_argument('--anno-path', default='dataset/server_room/test_digit.txt')
 parser.add_argument('--arch', default='ssd300')
-parser.add_argument('--num-examples', default=1, type=int)
+parser.add_argument('--num-examples', default=-1, type=int)
 parser.add_argument('--pretrained-type', default='specified')
 parser.add_argument('--checkpoint-dir', default='')
 parser.add_argument('--checkpoint-path', default='check_points/ssd/ssd_epoch_latest.h5') # latest
@@ -80,6 +80,7 @@ def predict(imgs, default_boxes):
 
 
 if __name__ == '__main__':
+    print('model loading..')
     with open('model/tensorflow/ssd/config.yml') as f:
         cfg = yaml.load(f, Loader=yaml.Loader)
 
@@ -108,10 +109,10 @@ if __name__ == '__main__':
     os.makedirs('check_points/ssd/outputs/images', exist_ok=True)
     os.makedirs('check_points/ssd/outputs/detects', exist_ok=True)
     visualizer = ImageVisualizer(info['idx_to_name'], save_dir='check_points/ssd/outputs/images')
-
-    for i, (filename, imgs, gt_confs, gt_locs) in enumerate(
-        tqdm(batch_generator, total=info['length'],
-             desc='Testing...', unit='images')):
+    
+    print('run inferencing')
+    progress = tqdm(batch_generator, total=info['length'], desc='Testing...', unit='images')
+    for i, (filename, imgs, gt_confs, gt_locs) in enumerate(progress):
         boxes, classes, scores = predict(imgs, default_boxes)
         filename = filename[0].numpy().decode()
         original_image = Image.open(filename)

@@ -10,9 +10,8 @@ import argparse
 import pycuda.driver as cuda
 import pycuda.autoinit
 
-from dataset import ImageDataset
+
 import torch
-from model import inceptionv4
 from torchvision import transforms 
 from torchmetrics import F1Score
 import logging
@@ -23,6 +22,59 @@ formatter = logging.Formatter('%(asctime)s - %(message)s')
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
+
+
+import os
+import numpy as np
+# import tensorflow as tf
+from PIL import Image
+# from model.tensorflow.yolo.config import cfg
+
+img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']
+
+class Dataset():
+    """implement Dataset here"""
+
+    def __init__(self, data_path, label_names = ['defect', 'normal']):
+        self.data_path = data_path
+        self.new_size = 224
+        self.label_map = {}
+        
+        for idx, cls in enumerate(label_names):
+            self.label_map[cls] = idx
+
+        _, self.file_path, self.labels = self._getfile_list(data_path)
+        self.label_idx = [ float(self.label_map[label]) for label in self.labels ]
+
+    def __len__(self):
+        return len(self.file_path)
+    
+    def _getfile_list(self, path, parent=None):
+        file_paths = []
+        file_names = []
+        labels = []
+        for filename in os.listdir(path):
+            fullpath = os.path.join(path, filename)
+            format = filename.split('.')[-1].lower()
+            if os.path.isfile(fullpath):
+                if (parent is not None) and (format in img_formats):
+                    file_paths.append(fullpath)
+                    file_names.append(filename)
+                    labels.append(parent)
+            else:
+                f, p, l = self._getfile_list(fullpath, filename)
+                file_names += f
+                file_paths += p
+                labels += l
+        return file_names, file_paths, labels
+    
+    def __getitem__(self, index):
+        org_img = Image.open(self.file_path[index])
+        img = np.array(org_img.resize((self.new_size, self.new_size)), dtype=np.float32)
+        img = img * (1/255)
+        img = (img - [0.485, 0.456, 0.406]) / np.sqrt([0.229, 0.224, 0.225])
+        return self.file_path[index], org_img, img, self.label_idx[index]
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -77,7 +129,8 @@ class TrtModel:
         self.inputs, self.outputs, self.bindings, self.stream = self.allocate_buffers()
         self.context = self.engine.create_execution_context()
 
-        
+                
+                
     @staticmethod
     def load_engine(trt_runtime, engine_path):
         trt.init_libnvinfer_plugins(None, "")
@@ -86,7 +139,6 @@ class TrtModel:
             engine_data = f.read()
         engine = trt_runtime.deserialize_cuda_engine(engine_data)
         return engine
-    
     
     def allocate_buffers(self):
         
@@ -130,7 +182,7 @@ class TrtModel:
 
 def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
-    labels = ["normal", "defect"]
+    labels = ["defect", "normal"]
     batch_size = 1
      # os.path.join("..","models","main.trt")
     model = TrtModel(model_path)
@@ -140,17 +192,10 @@ def inference(model_path, data_path, display = False):
     
     
     logger.info('dataset loading..')
-    tranform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize((224,224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-
-    dataset = ImageDataset(data_path, labels, tranform)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
+    # gen, total = create_batch_generator(data_path)
+    gen = Dataset(data_path)
+    total = len(gen)
     
-    total = len(dataset)
     logger.info('number of test dataset : {}'.format(total))
     
     logger.info('start inferencing')
@@ -163,8 +208,11 @@ def inference(model_path, data_path, display = False):
     start_time = time()
     pre_elap = 0.0
     fps = 0.0
-    for path, data, target in dataloader:
-        img = np.array(data)
+    for path, org_img, img, target in gen:
+        img = np.array([img])
+        path = np.array([path])
+        target = np.array([target])
+        
         output = model(img, batch_size)
         
         loss = output[0][0]
@@ -175,11 +223,10 @@ def inference(model_path, data_path, display = False):
 
         cnt += 1
         
-        logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, fps: {}'.format(cnt, total, path[0], labels[output], labels[target], output == target, loss))
+        logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, fps: {:.1f}'.format(cnt, total, path[0], labels[output], labels[target], output == target, fps))
 
         if(display):
-            img = cv2.imread(path[0])
-
+            img = cv2.cvtColor(np.array(org_img), cv2.COLOR_RGB2BGR)
             cv2.putText(img, 'Result: {}, Correct: {} '.format(labels[output], output == target), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
             cv2.putText(img, 'FPS: {:.2f}'.format(fps), (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
             cv2.imshow('img', img)
@@ -189,6 +236,9 @@ def inference(model_path, data_path, display = False):
         fps = max(0.0, 1.0 / (elap - pre_elap))
         pre_elap = elap
         
+    elap = time() - start_time
+    fps = total / elap
+    
     if(display):
         cv2.destroyAllWindows()
 
@@ -197,14 +247,11 @@ def inference(model_path, data_path, display = False):
     # acc = (correct/len(dataset))
     f1_score = f1(preds, targets) 
     
-    elap = time() - start_time
-    fps = total / elap
     logger.info('f1-score : {:.4f}, fps : {:.4f}'.format(float(f1_score), fps))
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Inceptionv4')
-    
-    parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/inception/model.engine')
+    parser = argparse.ArgumentParser(description='resnet50')
+    parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/resnet50/model.engine')
     parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/casting_data/test')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
     
