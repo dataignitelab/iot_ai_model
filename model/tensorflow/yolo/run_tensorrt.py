@@ -133,8 +133,8 @@ def inference(model_path, data_path, display = False, save = False):
             cls_boxes = locs[score_idx]
             cls_scores = cls_scores[score_idx]
             
-            # cls_boxes[:, [0,1]] = cls_boxes[:, [0,1]] - (cls_boxes[:, [2,3]] / 2)
-            # cls_boxes[:, [2,3]] = cls_boxes[:, [2,3]] + cls_boxes[:, [0,1]]
+            cls_boxes[:, :2] = cls_boxes[:, :2] - (cls_boxes[:, 2:] / 2)
+            cls_boxes[:, 2:] = cls_boxes[:, 2:] + cls_boxes[:, :2]
             
             nms_idx = compute_nms(cls_boxes, cls_scores , 0.6, 5)
             
