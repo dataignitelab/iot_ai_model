@@ -170,9 +170,6 @@ def inference(model_path, data_path, display = False, save = False):
     
     idx = 0
     
-    if display:
-        cv2.resizeWindow('img', 300, 300) 
-    
     for filename, org_img, img, gt_confs, gt_locs in tqdm(voc.generate()):
         img = np.expand_dims(img, 0)
         confs, locs = model(img)
@@ -184,8 +181,8 @@ def inference(model_path, data_path, display = False, save = False):
         locs = locs.reshape((8732, 4))
         
         confs = softmax(confs)
-        classes = np.argmax(confs, axis=-1)
-        scores = np.max(confs, axis=-1)
+        # classes = np.argmax(confs, axis=-1)
+        # scores = np.max(confs, axis=-1)
         
         boxes = decode(default_boxes, locs)
         
