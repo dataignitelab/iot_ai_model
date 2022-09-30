@@ -188,7 +188,7 @@ def inference(model_path, data_path, display = False, save = False):
         
         out_boxes = []
         out_labels = []
-        out_scores = []
+        # out_scores = []
         
         for c in range(1, NUM_CLASSES):
             cls_scores = confs[:, c]
@@ -200,29 +200,28 @@ def inference(model_path, data_path, display = False, save = False):
 
             nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 15)
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
-            cls_scores = np.take(cls_scores, nms_idx, axis=0)
+            # cls_scores = np.take(cls_scores, nms_idx, axis=0)
             cls_labels = [c] * cls_boxes.shape[0]
 
             out_boxes.append(cls_boxes)
             out_labels.extend(cls_labels)
-            out_scores.append(cls_scores)
+            # out_scores.append(cls_scores)
 
         out_boxes = np.concatenate(out_boxes, axis=0)
-        out_scores = np.concatenate(out_scores, axis=0)
+        # out_scores = np.concatenate(out_scores, axis=0)
 
-        boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
-        classes = np.array(out_labels)
-        scores = out_scores
+        # boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
+        classes = out_labels # np.array(out_labels)
+        # scores = out_scores
         
-        original_image = org_img
-        boxes *= original_image.size * 2
+        boxes *= org_img.size * 2
         # break
         
         if display:
-            visualizer.display_image(original_image, boxes, classes, '{:d}'.format(idx))
+            visualizer.display_image(org_img, boxes, out_labels, '{:d}'.format(idx))
         
         if save:
-            visualizer.save_image(original_image, boxes, classes, '{:d}'.format(idx))
+            visualizer.save_image(org_img, boxes, out_labels, '{:d}'.format(idx))
         idx = idx + 1
     
     if(display):
