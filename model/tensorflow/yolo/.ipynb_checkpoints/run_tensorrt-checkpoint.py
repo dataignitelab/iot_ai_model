@@ -107,8 +107,8 @@ def inference(model_path, data_path, display = False, save = False):
         org_img = cv2.imread(filename)
         h,w,_ = org_img.shape
         org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
-        img = img.astype(np.float32) / 255.
+        org_img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
+        img = org_img.astype(np.float32) / 255.
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
         d.append(img)
         o.append(org_img)
@@ -182,7 +182,7 @@ def inference(model_path, data_path, display = False, save = False):
         out_boxes = np.concatenate(out_boxes, axis=0)
         out_scores = np.concatenate(out_scores, axis=0)
 
-        out_boxes = out_boxes / INPUT_SIZE  * [w,h,w,h]
+       
         boxes = out_boxes.astype(dtype=int)
         
         if display:
@@ -193,6 +193,8 @@ def inference(model_path, data_path, display = False, save = False):
             
         image_idx = image_idx + 1
         
+        out_boxes = boxes / INPUT_SIZE  * [w,h,w,h]
+        boxes = out_boxes.astype(dtype=int)
         list_filename.append(filename)
         list_classes.append(out_labels)
         list_boxes.append(boxes)
