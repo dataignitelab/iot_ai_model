@@ -31,10 +31,6 @@ from losses import create_losses
 from network import create_ssd
 from PIL import Image
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(message)s')
@@ -219,10 +215,17 @@ def inference(model_path, data_path, display = False):
         original_image = Image.open(filename)
         boxes *= original_image.size * 2
         # break
-        visualizer.save_image(original_image, boxes, classes, '{:d}'.format(idx))
+        
+        if display:
+            visualizer.display_image(original_image, boxes, classes, '{:d}'.format(idx))
+        else:
+            visualizer.save_image(original_image, boxes, classes, '{:d}'.format(idx))
         idx = idx + 1
         
         if (len(voc) == (idx+1)): break
+    
+    if(display):
+        cv2.destroyAllWindows()
     
     # data_paths = glob(dataset_path)
     

@@ -26,7 +26,7 @@ parser.add_argument('--neg-ratio', default=3, type=int)
 parser.add_argument('--initial-lr', default=1e-3, type=float)
 parser.add_argument('--momentum', default=0.9, type=float)
 parser.add_argument('--weight-decay', default=5e-4, type=float)
-parser.add_argument('--num-epochs', default=10, type=int)
+parser.add_argument('--num-epochs', default=100, type=int)
 parser.add_argument('--checkpoint-dir', default='./check_points/ssd')
 parser.add_argument('--checkpoint-path', default='check_points/ssd/ssd_epoch_latest.h5') # latest
 parser.add_argument('--pretrained-type', default='base')
@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     default_boxes = generate_default_boxes(config)
 
-    batch_generator, val_generator, info = create_batch_generator(
+    batch_generator, info = create_batch_generator(
         args.anno_path, default_boxes,
         config['image_size'],
         args.batch_size, args.num_batches,
@@ -96,22 +96,19 @@ if __name__ == '__main__':
                     int(steps_per_epoch * args.num_epochs * 5 / 6)],
         values=[args.initial_lr, args.initial_lr * 0.1, args.initial_lr * 0.01])
     
-    optimizer = tf.keras.optimizers.SGD(
-        learning_rate=lr_fn,
-        momentum=args.momentum)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=lr_fn)
 
     train_log_dir = './check_points/ssd/logs/train'
-    val_log_dir = './check_points/ssd/logs/val'
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-    val_summary_writer = tf.summary.create_file_writer(val_log_dir)
 
-    progress = tqdm(range(args.num_epochs))
-    for epoch in progress:
+    for epoch in range(args.num_epochs):
         avg_loss = 0.0
         avg_conf_loss = 0.0
         avg_loc_loss = 0.0
         start = time.time()
-        for i, (_, imgs, gt_confs, gt_locs) in enumerate(batch_generator):
+        i = 0
+        progress = tqdm(batch_generator)
+        for _, imgs, gt_confs, gt_locs in progress:
             loss, conf_loss, loc_loss, l2_loss = train_step(imgs, gt_confs, gt_locs, ssd, criterion, optimizer)
             avg_loss = (avg_loss * i + loss.numpy()) / (i + 1)
             avg_conf_loss = (avg_conf_loss * i + conf_loss.numpy()) / (i + 1)
@@ -119,27 +116,23 @@ if __name__ == '__main__':
             
             progress.set_description('Epoch: {} Batch {} Time: {:.2}s | Loss: {:.4f} Conf: {:.4f} Loc: {:.4f}'.format(
             epoch + 1, i + 1, time.time() - start, avg_loss, avg_conf_loss, avg_loc_loss))
+            i = i + 1
         
-        avg_val_loss = 0.0
-        avg_val_conf_loss = 0.0
-        avg_val_loc_loss = 0.0
-        for i, (_, imgs, gt_confs, gt_locs) in enumerate(val_generator):
-            val_confs, val_locs = ssd(imgs)
-            val_conf_loss, val_loc_loss = criterion(val_confs, val_locs, gt_confs, gt_locs)
-            val_loss = val_conf_loss + val_loc_loss
-            avg_val_loss = (avg_val_loss * i + val_loss.numpy()) / (i + 1)
-            avg_val_conf_loss = (avg_val_conf_loss * i + val_conf_loss.numpy()) / (i + 1)
-            avg_val_loc_loss = (avg_val_loc_loss * i + val_loc_loss.numpy()) / (i + 1)
+        # avg_val_loss = 0.0
+        # avg_val_conf_loss = 0.0
+        # avg_val_loc_loss = 0.0
+        # for i, (_, imgs, gt_confs, gt_locs) in enumerate(val_generator):
+        #     val_confs, val_locs = ssd(imgs)
+        #     val_conf_loss, val_loc_loss = criterion(val_confs, val_locs, gt_confs, gt_locs)
+        #     val_loss = val_conf_loss + val_loc_loss
+        #     avg_val_loss = (avg_val_loss * i + val_loss.numpy()) / (i + 1)
+        #     avg_val_conf_loss = (avg_val_conf_loss * i + val_conf_loss.numpy()) / (i + 1)
+        #     avg_val_loc_loss = (avg_val_loc_loss * i + val_loc_loss.numpy()) / (i + 1)
 
         with train_summary_writer.as_default():
             tf.summary.scalar('loss', avg_loss, step=epoch)
             tf.summary.scalar('conf_loss', avg_conf_loss, step=epoch)
             tf.summary.scalar('loc_loss', avg_loc_loss, step=epoch)
-
-        with val_summary_writer.as_default():
-            tf.summary.scalar('loss', avg_val_loss, step=epoch)
-            tf.summary.scalar('conf_loss', avg_val_conf_loss, step=epoch)
-            tf.summary.scalar('loc_loss', avg_val_loc_loss, step=epoch)
 
         if (epoch + 1) % 10 == 0:
             ssd.save_weights(os.path.join(args.checkpoint_dir, 'ssd_epoch_{}.h5'.format(epoch + 1)))

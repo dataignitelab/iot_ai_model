@@ -41,7 +41,7 @@ def compute_iou(boxes_a, boxes_b):
 
     return overlap    
 
-def compute_target(default_boxes, gt_boxes, gt_labels, iou_threshold=0.40):
+def compute_target(default_boxes, gt_boxes, gt_labels, iou_threshold=0.10):
     """ Compute regression and classification targets
     Args:
         default_boxes: tensor (num_default, 4)
@@ -81,11 +81,7 @@ def compute_target(default_boxes, gt_boxes, gt_labels, iou_threshold=0.40):
         tf.expand_dims(best_default_idx, 1),
         tf.ones_like(best_default_idx, dtype=tf.float32))
 
-    # print(gt_labels)
     gt_confs = tf.gather(gt_labels, best_gt_idx)
-    
-    # for l in gt_labels:
-    #     print(l, max(best_gt_iou[gt_confs == l]))
     
     gt_confs = tf.where(
         tf.less(best_gt_iou, iou_threshold),
@@ -93,7 +89,10 @@ def compute_target(default_boxes, gt_boxes, gt_labels, iou_threshold=0.40):
         gt_confs)
     
     # for l in gt_labels:
-    #     print(l, len(gt_confs[gt_confs == l]))
+    #     if len(gt_confs[gt_confs == l]) == 0:
+    #         print(gt_labels)
+    #         print(l-1, len(gt_confs[gt_confs == l]))
+        
     gt_boxes = tf.gather(gt_boxes, best_gt_idx)
     gt_locs = encode(default_boxes, gt_boxes)
 

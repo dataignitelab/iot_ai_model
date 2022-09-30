@@ -1,5 +1,6 @@
 import os
 from PIL import Image
+import cv2
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import random
@@ -7,6 +8,28 @@ import numpy as np
 import tensorflow as tf
 
 from box_utils import compute_iou
+
+
+palette = [(255, 56, 56),
+    (255, 157, 151),
+    (255, 112, 31),
+    (255, 178, 29),
+    (207, 210, 49),
+    (72, 249, 10),
+    (146, 204, 23),
+    (61, 219, 134),
+    (26, 147, 52),
+    (0, 212, 187),
+    (44, 153, 168),
+    (0, 194, 255),
+    (52, 69, 147),
+    (100, 115, 255),
+    (0, 24, 236),
+    (132, 56, 255),
+    (82, 0, 133),
+    (203, 56, 255),
+    (255, 149, 200),
+    (255, 55, 199)]
 
 
 class ImageVisualizer(object):
@@ -71,6 +94,22 @@ class ImageVisualizer(object):
         # plt.gca().yaxis.set_major_locator(NullLocator())
         plt.savefig(save_path, bbox_inches="tight", pad_inches=0.0)
         plt.close('all')
+    
+    def display_image(self, img, boxes, labels, name):
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        for i, box in enumerate(boxes):
+            idx = labels[i] - 1
+            cls_name = self.idx_to_name[idx]
+            top_left = (box[0], box[1])
+            bot_right = (box[2], box[3])
+            
+            color = palette[idx]
+            
+            cv2.rectangle(image, top_left, bot_right, color, 1)
+            cv2.rectangle(image, (top_left[0], top_left[1]-10), (bot_right[0]+40,bot_right[1]), color, -1)
+            cv2.putText(image, '{}:{:.2f}'.format(cls_name), (top_left[0], top_left[1]-1), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1)
+            cv2.imshow('img', img)
+            cv2.waitKey(1)
 
         
 def generate_patch(boxes, threshold):

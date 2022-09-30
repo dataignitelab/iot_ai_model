@@ -239,8 +239,7 @@ def inference(model_path, data_path, display = False):
     elap = time() - start_time
     fps = total / elap
     
-    if(display):
-        cv2.destroyAllWindows()
+    
 
     preds = torch.tensor(preds)
     targets = torch.tensor(targets)

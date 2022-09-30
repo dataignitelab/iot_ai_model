@@ -21,7 +21,7 @@ parser.add_argument('--arch', default='ssd300')
 parser.add_argument('--num-examples', default=-1, type=int)
 parser.add_argument('--pretrained-type', default='specified')
 parser.add_argument('--checkpoint-dir', default='')
-parser.add_argument('--checkpoint-path', default='check_points/ssd/ssd_epoch_latest.h5') # latest
+parser.add_argument('--checkpoint-path', default='check_points/ssd/model.h5') # latest
 parser.add_argument('--gpu-id', default='0')
 
 args = parser.parse_args()
@@ -33,10 +33,7 @@ BATCH_SIZE = 1
 
 
 def predict(imgs, default_boxes):
-    print(imgs.shape)
     confs, locs = ssd(imgs)
-    print(confs.shape, locs.shape)
-
     confs = tf.squeeze(confs, 0)
     locs = tf.squeeze(locs, 0)
 
@@ -54,7 +51,7 @@ def predict(imgs, default_boxes):
     for c in range(1, NUM_CLASSES):
         cls_scores = confs[:, c]
 
-        score_idx = cls_scores > 0.2
+        score_idx = cls_scores > 0.7
         
         # print((c-1), max(cls_scores))
         # cls_boxes = tf.boolean_mask(boxes, score_idx)
@@ -62,7 +59,7 @@ def predict(imgs, default_boxes):
         cls_boxes = boxes[score_idx]
         cls_scores = cls_scores[score_idx]
 
-        nms_idx = compute_nms(cls_boxes, cls_scores, 0.3, 200)
+        nms_idx = compute_nms(cls_boxes, cls_scores, 0.1, 200)
         cls_boxes = tf.gather(cls_boxes, nms_idx)
         cls_scores = tf.gather(cls_scores, nms_idx)
         cls_labels = [c] * cls_boxes.shape[0]
@@ -119,8 +116,8 @@ if __name__ == '__main__':
         filename = filename[0].numpy().decode()
         original_image = Image.open(filename)
         boxes *= original_image.size * 2
-        break
-        # visualizer.save_image(original_image, boxes, classes, '{:d}'.format(i))
+        # break
+        visualizer.save_image(original_image, boxes, classes, '{:d}'.format(i))
 
 #         log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
 
