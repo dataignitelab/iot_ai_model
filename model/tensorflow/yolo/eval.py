@@ -14,7 +14,7 @@ def compute_ap(rec, prec):
     return ap
 
 
-def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
+def model_eval(det_file, anno, cls_name, iou_thresh=0.71):
     with open(det_file, 'r') as f:
         lines = f.readlines()
 

@@ -108,16 +108,23 @@ def inference(model_path, data_path, display = False, save = False):
         
         box_list = []
         conf_list = []
-        for idx, output in enumerate(preds):
-            if idx % 2 == 0 : continue
-            output = output.reshape(-1, 15)
-            boxes = output[:, 0:4]
-            pred_conf = output[:, 4:]
-            box_list.append(boxes)
-            conf_list.append(pred_conf)
+#         for idx, output in enumerate(preds):
+#             if idx % 2 == 0 : continue
+#             output = output.reshape(-1, 15)
+#             boxes = output[:, 0:4]
+#             pred_conf = output[:, 4:]
+#             box_list.append(boxes)
+#             conf_list.append(pred_conf)
             
-        locs = np.concatenate([box_list[0], box_list[1]], 0)
-        confs = np.concatenate([conf_list[0], conf_list[1]], 0)
+#         locs = np.concatenate([box_list[0], box_list[1]], 0)
+#         confs = np.concatenate([conf_list[0], conf_list[1]], 0)
+        
+        output = np.concatenate([preds[1].reshape(-1, 15), preds[3].reshape(-1, 15)], 0)
+        
+        output = output[output[:,4] > 0.5]
+        
+        locs = output[:, :4]
+        confs = output[:, 4:]
             
         confs =  confs[:, 1:] * confs[:, :1]
         locs[:, [0,1]] = locs[:, [0,1]] - (locs[:, [2,3]] / 2)
@@ -135,10 +142,10 @@ def inference(model_path, data_path, display = False, save = False):
         for c in range(0, NUM_CLASS):
             cls_scores = confs[:, c]
 
-            score_idx = cls_scores > 0.1
+            score_idx = cls_scores > 0.5
             cls_boxes = locs[score_idx]
             cls_scores = cls_scores[score_idx]
-            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 100)
+            nms_idx = compute_nms(cls_boxes, cls_scores, 0.5, 50)
             
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
             cls_scores = np.take(cls_scores, nms_idx, axis=0)
