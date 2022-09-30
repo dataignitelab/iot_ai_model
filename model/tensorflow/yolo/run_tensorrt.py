@@ -114,8 +114,11 @@ def inference(model_path, data_path, display = False, save = False):
         # print(preds[0].shape, preds[1].shape, preds[2].shape, preds[3].shape, preds[4].shape, preds[5].shape)
         # break
         
-        locs = np.concatenate([preds[2].reshape(-1, 4), preds[5].reshape(-1, 4)], 0)
-        confs = np.concatenate([preds[1].reshape(-1, 10), preds[4].reshape(-1, 10)], 0)
+        locs = preds[2].reshape(-1, 4) # np.concatenate([preds[2].reshape(-1, 4), preds[5].reshape(-1, 4)], axis=0)
+        confs = preds[1].reshape(-1, 10) # np.concatenate([preds[1].reshape(-1, 10), preds[4].reshape(-1, 10)], axis=0)
+        classes = np.argmax(confs, axis=-1)
+        scores = np.max(confs, axis=-1)
+        
         # box_list = []
         # conf_list = []
 #         for idx, output in enumerate(preds):
@@ -144,13 +147,6 @@ def inference(model_path, data_path, display = False, save = False):
         # confs = output[:, 4:]
             
         # confs =  confs[:, 1:] * confs[:, :1]
-        locs[:, [0,1]] = locs[:, [0,1]] - (locs[:, [2,3]] / 2)
-        locs[:, [2,3]] = locs[:, [2,3]] + locs[:, [0,1]]
-        
-        locs = locs / INPUT_SIZE * [w,h,w,h]
-
-        classes = np.argmax(confs, axis=-1)
-        scores = np.max(confs, axis=-1)
         
         out_boxes = []
         out_labels = []
@@ -159,10 +155,15 @@ def inference(model_path, data_path, display = False, save = False):
         for c in range(0, NUM_CLASS):
             cls_scores = confs[:, c]
 
-            score_idx = cls_scores > 0.5
+            score_idx = cls_scores > 0.8
+            
             cls_boxes = locs[score_idx]
             cls_scores = cls_scores[score_idx]
-            nms_idx = compute_nms(cls_boxes, cls_scores, 0.5, 50)
+            
+            cls_boxes[:, [0,1]] = cls_boxes[:, [0,1]] - (cls_boxes[:, [2,3]] / 2)
+            cls_boxes[:, [2,3]] = cls_boxes[:, [2,3]] + cls_boxes[:, [0,1]]
+            
+            nms_idx = compute_nms(cls_boxes, cls_scores , 0.6, 10)
             
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
             cls_scores = np.take(cls_scores, nms_idx, axis=0)
@@ -175,14 +176,15 @@ def inference(model_path, data_path, display = False, save = False):
         out_boxes = np.concatenate(out_boxes, axis=0)
         out_scores = np.concatenate(out_scores, axis=0)
 
-        boxes = out_boxes.astype(dtype=np.int16)
-        # break
+        out_boxes = out_boxes / INPUT_SIZE  * [w,h,w,h]
+        boxes = out_boxes.astype(dtype=int)
         
         if display:
             visualizer.display_image(org_img, boxes, out_labels, '{:d}'.format(image_idx))
         
         if save:
             visualizer.save_image(org_img, boxes, out_labels, '{:d}'.format(image_idx))
+            
         image_idx = image_idx + 1
         
         list_filename.append(filename)
