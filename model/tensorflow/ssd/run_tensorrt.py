@@ -143,7 +143,7 @@ class TrtModel:
         return [out.host.reshape(batch_size,-1) for out in self.outputs]
 
 
-def inference(model_path, data_path, display = False):
+def inference(model_path, data_path, display = False, save = False):
     logger.info('model loading.. {}'.format(model_path))
     labels = ["defect", "normal"]
     batch_size = 1
@@ -169,6 +169,10 @@ def inference(model_path, data_path, display = False):
     visualizer = ImageVisualizer(['0','1','2','3','4','5','6','7','8','9'], save_dir='check_points/ssd/outputs/images')
     
     idx = 0
+    
+    if display:
+        cv2.resizeWindow('img', 300, 300) 
+    
     for filename, org_img, img, gt_confs, gt_locs in tqdm(voc.generate()):
         img = np.expand_dims(img, 0)
         confs, locs = model(img)
@@ -188,11 +192,11 @@ def inference(model_path, data_path, display = False):
         out_boxes = []
         out_labels = []
         out_scores = []
-
+        
         for c in range(1, NUM_CLASSES):
             cls_scores = confs[:, c]
 
-            score_idx = cls_scores > 0.2
+            score_idx = cls_scores > 0.4
             
             cls_boxes = boxes[score_idx]
             cls_scores = cls_scores[score_idx]
@@ -219,11 +223,10 @@ def inference(model_path, data_path, display = False):
         
         if display:
             visualizer.display_image(original_image, boxes, classes, '{:d}'.format(idx))
-        else:
+        
+        if save:
             visualizer.save_image(original_image, boxes, classes, '{:d}'.format(idx))
         idx = idx + 1
-        
-        if (len(voc) == (idx+1)): break
     
     if(display):
         cv2.destroyAllWindows()
@@ -294,6 +297,7 @@ if __name__ == "__main__":
     parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/ssd/model.engine')
     # parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/casting_data/test')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
+    parser.add_argument('--save', dest='save', type=str2bool, default=False)
     parser.add_argument('--anno-path', default='dataset/server_room/test_digit.txt')
     parser.add_argument('--arch', default='ssd300')
     parser.add_argument('--num-examples', default=-1, type=int)
@@ -302,4 +306,4 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     logger.info(args)
-    inference(args.model_path, args.anno_path, args.display)
+    inference(args.model_path, args.anno_path, args.display, args.save)

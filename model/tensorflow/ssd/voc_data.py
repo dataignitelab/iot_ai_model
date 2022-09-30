@@ -130,6 +130,7 @@ class VOCDataset():
             indices = self.val_ids
         else:
             indices = self.ids
+            
         for index in range(len(indices)):
             # img, orig_shape = self._get_image(index)
             filename = indices[index]
@@ -185,7 +186,7 @@ def create_batch_generator(data_anno_path, default_boxes,
     }
 
     if mode == 'train':
-        train_dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.int64, tf.float32))
+        train_dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.float32, tf.int64, tf.float32))
         # val_gen = partial(voc.generate, subset='val')
         # val_dataset = tf.data.Dataset.from_generator(
         #     val_gen, (tf.string, tf.float32, tf.int64, tf.float32))
@@ -193,6 +194,6 @@ def create_batch_generator(data_anno_path, default_boxes,
         train_dataset = train_dataset.shuffle(40).batch(batch_size)
         return train_dataset, info
     else:
-        dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.int64, tf.float32))
+        dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.float32, tf.int64, tf.float32))
         dataset = dataset.batch(batch_size)
         return dataset.take(num_batches), info

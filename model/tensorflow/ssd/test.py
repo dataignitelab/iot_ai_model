@@ -111,7 +111,7 @@ if __name__ == '__main__':
     
     print('run inferencing')
     progress = tqdm(batch_generator, total=info['length'], desc='Testing...', unit='images')
-    for i, (filename, imgs, gt_confs, gt_locs) in enumerate(progress):
+    for i, (filename, _, imgs, gt_confs, gt_locs) in enumerate(progress):
         boxes, classes, scores = predict(imgs, default_boxes)
         filename = filename[0].numpy().decode()
         original_image = Image.open(filename)

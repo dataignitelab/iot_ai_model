@@ -108,7 +108,7 @@ if __name__ == '__main__':
         start = time.time()
         i = 0
         progress = tqdm(batch_generator)
-        for _, imgs, gt_confs, gt_locs in progress:
+        for _, org_imgs, imgs, gt_confs, gt_locs in progress:
             loss, conf_loss, loc_loss, l2_loss = train_step(imgs, gt_confs, gt_locs, ssd, criterion, optimizer)
             avg_loss = (avg_loss * i + loss.numpy()) / (i + 1)
             avg_conf_loss = (avg_conf_loss * i + conf_loss.numpy()) / (i + 1)
