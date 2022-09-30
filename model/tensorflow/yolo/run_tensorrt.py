@@ -97,10 +97,14 @@ def inference(model_path, data_path, display = False, save = False):
         col = row.split()
         filename = os.path.join(dir_path, col[0])
         
+        # org_img = Image.open(filename)
+        # w,h = org_img.size
+        # img = np.array(org_img.resize((INPUT_SIZE, INPUT_SIZE)), dtype= np.float)
+        
         org_img = cv2.imread(filename)
         h,w,_ = org_img.shape
         org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
+        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE)).astype(np.float32)
         img = img / 255.
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
 
@@ -119,9 +123,14 @@ def inference(model_path, data_path, display = False, save = False):
 #         locs = np.concatenate([box_list[0], box_list[1]], 0)
 #         confs = np.concatenate([conf_list[0], conf_list[1]], 0)
         
-        output = np.concatenate([preds[1].reshape(-1, 15), preds[3].reshape(-1, 15)], 0)
-        
-        output = output[output[:,4] > 0.5]
+        p1 = preds[1].reshape(-1, 15)
+        p2 = preds[3].reshape(-1, 15)
+        p1 = p1[p1[:,4] > 0.5]
+        p2 = p2[p2[:,4] > 0.5]
+    
+        output = np.concatenate([p1, p2], 0)
+        # output = np.concatenate([preds[1].reshape(-1, 15), preds[3].reshape(-1, 15)], 0)
+        # output = output[output[:,4] > 0.5]
         
         locs = output[:, :4]
         confs = output[:, 4:]

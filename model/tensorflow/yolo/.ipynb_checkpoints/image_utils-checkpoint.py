@@ -98,7 +98,7 @@ class ImageVisualizer(object):
         plt.close('all')
     
     def display_image(self, img, boxes, labels, name):
-        image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        image = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         for i, box in enumerate(boxes):
             idx = labels[i] 
             cls_name = self.idx_to_name[idx]
