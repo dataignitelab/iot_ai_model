@@ -96,7 +96,7 @@ class ImageVisualizer(object):
         plt.close('all')
     
     def display_image(self, img, boxes, labels, name):
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
         for i, box in enumerate(boxes):
             idx = labels[i] - 1
             cls_name = self.idx_to_name[idx]
@@ -108,7 +108,7 @@ class ImageVisualizer(object):
             cv2.rectangle(image, top_left, bot_right, color, 1)
             cv2.rectangle(image, (top_left[0], top_left[1]-10), (bot_right[0]+40,bot_right[1]), color, -1)
             cv2.putText(image, '{}:{:.2f}'.format(cls_name), (top_left[0], top_left[1]-1), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1)
-            cv2.imshow('img', img)
+            cv2.imshow('img', image)
             cv2.waitKey(1)
 
         
