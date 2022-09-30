@@ -207,7 +207,7 @@ def inference(model_path, data_path, display = False, save = False):
             out_labels.extend(cls_labels)
             # out_scores.append(cls_scores)
 
-        out_boxes = np.concatenate(out_boxes, axis=0, dtype=np.int16)
+        out_boxes = np.concatenate(out_boxes, axis=0)
         # out_scores = np.concatenate(out_scores, axis=0)
 
         # boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
@@ -215,6 +215,7 @@ def inference(model_path, data_path, display = False, save = False):
         # scores = out_scores
         
         out_boxes *= org_img.size * 2
+        out_boxes = out_boxes.astype(dtype=np.int16)
         # break
         
         if display:
