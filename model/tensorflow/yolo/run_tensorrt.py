@@ -107,7 +107,7 @@ def inference(model_path, data_path, display = False, save = False):
         org_img = cv2.imread(filename)
         h,w,_ = org_img.shape
         org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
-        org_img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
+        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
         img = img.astype(np.float32) / 255.
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
         d.append(img)
