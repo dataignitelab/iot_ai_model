@@ -169,7 +169,7 @@ def inference(model_path, data_path, display = False):
     visualizer = ImageVisualizer(['0','1','2','3','4','5','6','7','8','9'], save_dir='check_points/ssd/outputs/images')
     
     idx = 0
-    for filename, img, gt_confs, gt_locs in tqdm(voc.generate()):
+    for filename, org_img, img, gt_confs, gt_locs in tqdm(voc.generate()):
         img = np.expand_dims(img, 0)
         confs, locs = model(img)
         
@@ -213,7 +213,7 @@ def inference(model_path, data_path, display = False):
         classes = np.array(out_labels)
         scores = out_scores
         
-        original_image = Image.open(filename)
+        original_image = org_img
         boxes *= original_image.size * 2
         # break
         

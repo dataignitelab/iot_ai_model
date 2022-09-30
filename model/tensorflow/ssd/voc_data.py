@@ -133,10 +133,11 @@ class VOCDataset():
         for index in range(len(indices)):
             # img, orig_shape = self._get_image(index)
             filename = indices[index]
-            img = self._get_image(index)
-            w, h = img.size
+            org_img = self._get_image(index)
+            w, h = org_img.size
             boxes, labels = self._get_annotation(index, (h, w))
 
+            img = org_img
             if self.augmentation :
                 if random.random() < 0.5:
                     img, boxes = random_resize(img, boxes)
@@ -164,7 +165,7 @@ class VOCDataset():
             else:
                 gt_confs, gt_locs = compute_target_numpy(self.default_boxes, boxes, labels)
             
-            yield filename, img, gt_confs, gt_locs
+            yield filename, org_img, img, gt_confs, gt_locs
 
 
 def create_batch_generator(data_anno_path, default_boxes,
