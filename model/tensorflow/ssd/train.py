@@ -75,7 +75,7 @@ if __name__ == '__main__':
         args.anno_path, default_boxes,
         config['image_size'],
         args.batch_size, args.num_batches,
-        mode='train')  # the patching algorithm is currently causing bottleneck sometimes   , augmentation=['flip']
+        mode='train', augmentation = False)  # the patching algorithm is currently causing bottleneck sometimes   , augmentation=['flip']
     
     try:
         ssd = create_ssd(NUM_CLASSES, args.arch,

@@ -8,6 +8,8 @@ import tensorrt as trt
 import pycuda.driver as cuda
 import pycuda.autoinit
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 import torch
 from torchvision import transforms 
 from torchmetrics import F1Score
@@ -38,10 +40,38 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-labels = ['0','1','2','3','4','5','6','7','8','9']
+INPUT_SIZE = 416
+NUM_CLASS = 10
+EPOCHS = 100
+BATCH_SIZE = 64
+IOU_LOSS_THRESH = 0.3
 
-NUM_CLASSES = 11
-BATCH_SIZE = 1
+CLASSES = ['0','1','2','3','4','5','6','7','8','9']
+ANCHORS        = [23,27, 37,58, 81,82, 81,82, 135,169, 344,319]
+STRIDES       =  [16, 32]
+XYSCALE       = [1.05, 1.05]
+ANCHOR_PER_SCALE     = 3
+
+palette = [(255, 56, 56),
+    (255, 157, 151),
+    (255, 112, 31),
+    (255, 178, 29),
+    (207, 210, 49),
+    (72, 249, 10),
+    (146, 204, 23),
+    (61, 219, 134),
+    (26, 147, 52),
+    (0, 212, 187),
+    (44, 153, 168),
+    (0, 194, 255),
+    (52, 69, 147),
+    (100, 115, 255),
+    (0, 24, 236),
+    (132, 56, 255),
+    (82, 0, 133),
+    (203, 56, 255),
+    (255, 149, 200),
+    (255, 55, 199)]
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -145,7 +175,6 @@ class TrtModel:
 def inference(model_path, data_path, display = False, save = False):
     logger.info('model loading.. {}'.format(model_path))
     batch_size = 1
-    new_size = 300
     
     model = TrtModel(model_path)
     shape = model.engine.get_binding_shape(0)
@@ -162,8 +191,8 @@ def inference(model_path, data_path, display = False, save = False):
     use_tensor = False
     default_boxes = generate_default_boxes(config, use_tensor = use_tensor)
     
-    # voc = VOCDataset(data_path, default_boxes,
-    #                  config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
+    voc = VOCDataset(data_path, default_boxes,
+                     config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
     
     visualizer = ImageVisualizer(labels, save_dir='check_points/ssd/outputs/images')
     
@@ -174,16 +203,15 @@ def inference(model_path, data_path, display = False, save = False):
     list_boxes = []
     list_scores = []
     
-    with open(data_path, 'r') as anno:
-        lines = anno.readlines()
-
-    for row in tqdm(lines):
-        col = row.split()
-        filename = os.path.join('dataset/server_room',col[0])
+    for filename, org_img, img, gt_confs, gt_locs in tqdm(voc.generate()):
+        
         org_img = Image.open(filename)
-        img = np.array(org_img.resize((new_size, new_size)), dtype=np.float32)
+        img = np.array(org_img.resize(
+                (self.new_size, self.new_size)), dtype=np.float32)
         img = (img / 127.0) - 1.0
-        img = img.reshape(1,img.shape[0],img.shape[1],img.shape[2])
+            
+            
+        img = np.expand_dims(img, 0)
         confs, locs = model(img)
         # confs = np.squeeze(confs, 0)
         # locs = np.squeeze(locs, 0)
@@ -327,8 +355,8 @@ def inference(model_path, data_path, display = False, save = False):
 #     logger.info('f1-score : {:.4f}, fps : {:.4f}'.format(float(f1_score), fps))
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='resnet50')
-    parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/ssd/model.engine')
+    parser = argparse.ArgumentParser(description='yolo')
+    parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/yolo/model.engine')
     # parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/casting_data/test')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
     parser.add_argument('--save', dest='save', type=str2bool, default=False)

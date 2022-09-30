@@ -5,47 +5,22 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data-dir', default='../dataset')
-parser.add_argument('--data-year', default='2007')
 parser.add_argument('--detect-dir', default='check_points/ssd/outputs/detects')
-parser.add_argument('--use-07-metric', type=bool, default=False)
 args = parser.parse_args()
 
-
-def get_annotation(anno_file):
-    tree = ET.parse(anno_file)
-    objects = []
-    for obj in tree.findall('object'):
-        obj_struct = {}
-        obj_struct['name'] = obj.find('name').text
-        obj_struct['pose'] = obj.find('pose').text
-        obj_struct['truncated'] = int(obj.find('truncated').text)
-        obj_struct['difficult'] = int(obj.find('difficult').text)
-        bbox = obj.find('bndbox')
-        obj_struct['bbox'] = [int(bbox.find('xmin').text),
-                              int(bbox.find('ymin').text),
-                              int(bbox.find('xmax').text),
-                              int(bbox.find('ymax').text)]
-        objects.append(obj_struct)
-
-    return objects
-
-
 def compute_ap(rec, prec):
-    mrec = np.concatenate(([0.0], rec, [1.0]))
-    mprec = np.concatenate(([0.0], prec, [0.0]))
-
-    for i in range(mprec.size - 1, 0, -1):
-        mprec[i - 1] = np.maximum(mprec[i - 1], mprec[i])
-
-    i = np.where(mrec[1:] != mrec[:-1])[0]
-
-    ap = np.sum((mrec[i + 1] - mrec[i]) * mprec[i + 1])
+    ap = 0.0
+    for t in np.arange(0.0, 1.1, 0.1):
+        if np.sum(rec >= t) == 0:
+            p = 0
+        else:
+            p = np.max(prec[rec >= t])
+        ap = ap + p / 11.
 
     return ap
 
 
-def model_eval(det_file, anno, cls_name, iou_thresh=0.5):
+def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
     with open(det_file, 'r') as f:
         lines = f.readlines()
 
@@ -60,19 +35,10 @@ def model_eval(det_file, anno, cls_name, iou_thresh=0.5):
     for image_id in image_ids:
         if image_id in cls_gts.keys():
             continue
-        # gts[image_id] = get_annotation(anno_path.format(image_id))
-        # R = [obj for obj in gts[image_id] if obj['name'] == cls_name]
         gt_boxes = np.array([ bbox[:4] for bbox in anno[image_id] if bbox[4] == cls_name ])
         
-        # gt_boxes = np.array([x['bbox'] for x in R])
-        # difficult = np.array([x['difficult'] for x in R]).astype(np.bool)
-        # det = [False] * len(R)
-        
-        # npos = npos + sum(~difficult)
         npos = npos + gt_boxes.shape[0]
         cls_gts[image_id] = gt_boxes
-    
-    print(cls_name, npos)
         
     sorted_ids = np.argsort(-confs)
     sorted_scores = np.sort(-confs)
@@ -110,18 +76,19 @@ def model_eval(det_file, anno, cls_name, iou_thresh=0.5):
             tp[d] = 1.0
         else:
             fp[d] = 1.0
-
+            
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
+    
     recall = tp / float(npos)
     precision = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
-
+    
     ap = compute_ap(recall, precision)
 
     return recall, precision, ap
 
 
-if __name__ == '__main__':
+def evaluate():
     aps = {
         '0': 0.0,
         '1': 0.0,
@@ -160,3 +127,7 @@ if __name__ == '__main__':
     aps['mAP'] = np.mean(aps['mAP'])
     for key, value in aps.items():
         print('{}: {}'.format(key, value))
+
+if __name__ == '__main__':
+    evaluate()
+    

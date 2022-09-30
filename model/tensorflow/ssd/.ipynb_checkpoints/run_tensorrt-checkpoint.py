@@ -8,8 +8,6 @@ import tensorrt as trt
 import pycuda.driver as cuda
 import pycuda.autoinit
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
 import torch
 from torchvision import transforms 
 from torchmetrics import F1Score
@@ -30,6 +28,7 @@ from voc_data import VOCDataset
 from image_utils import ImageVisualizer
 from losses import create_losses
 from network import create_ssd
+from voc_eval import evaluate
 from PIL import Image
 
 logger = logging.getLogger()
@@ -39,7 +38,6 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']
 labels = ['0','1','2','3','4','5','6','7','8','9']
 
 NUM_CLASSES = 11
@@ -147,6 +145,7 @@ class TrtModel:
 def inference(model_path, data_path, display = False, save = False):
     logger.info('model loading.. {}'.format(model_path))
     batch_size = 1
+    new_size = 300
     
     model = TrtModel(model_path)
     shape = model.engine.get_binding_shape(0)
@@ -163,8 +162,8 @@ def inference(model_path, data_path, display = False, save = False):
     use_tensor = False
     default_boxes = generate_default_boxes(config, use_tensor = use_tensor)
     
-    voc = VOCDataset(data_path, default_boxes,
-                     config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
+    # voc = VOCDataset(data_path, default_boxes,
+    #                  config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
     
     visualizer = ImageVisualizer(labels, save_dir='check_points/ssd/outputs/images')
     
@@ -175,10 +174,17 @@ def inference(model_path, data_path, display = False, save = False):
     list_boxes = []
     list_scores = []
     
-    for filename, org_img, img, gt_confs, gt_locs in tqdm(voc.generate()):
-        img = np.expand_dims(img, 0)
+    with open(data_path, 'r') as anno:
+        lines = anno.readlines()
+
+    for row in tqdm(lines):
+        col = row.split()
+        filename = os.path.join('dataset/server_room',col[0])
+        org_img = Image.open(filename)
+        img = np.array(org_img.resize((new_size, new_size)), dtype=np.float32)
+        img = (img / 127.0) - 1.0
+        img = img.reshape(1,img.shape[0],img.shape[1],img.shape[2])
         confs, locs = model(img)
-        
         # confs = np.squeeze(confs, 0)
         # locs = np.squeeze(locs, 0)
         
@@ -203,7 +209,7 @@ def inference(model_path, data_path, display = False, save = False):
             cls_boxes = boxes[score_idx]
             cls_scores = cls_scores[score_idx]
 
-            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 15)
+            nms_idx = compute_nms(cls_boxes, cls_scores, 0.1, 100)
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
             cls_scores = np.take(cls_scores, nms_idx, axis=0)
             cls_labels = [c] * cls_boxes.shape[0]
@@ -215,7 +221,7 @@ def inference(model_path, data_path, display = False, save = False):
         out_boxes = np.concatenate(out_boxes, axis=0)
         out_scores = np.concatenate(out_scores, axis=0)
 
-        # boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
+        boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
         # classes = out_labels # np.array(out_labels)
         # scores = out_scores
         
@@ -234,17 +240,18 @@ def inference(model_path, data_path, display = False, save = False):
         list_classes.append(out_labels)
         list_boxes.append(boxes)
         list_scores.append(out_scores)
+        
     
     if(display):
         cv2.destroyAllWindows()
         
     log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
-    logger.info('calcurate mAP.. {}'.format(model_path))
+    logger.info('calcurate mAP.. {}')
     
     for cls in labels:
-        if os.path.exists(cls):
-            os.remove(log_file.format(cls))
-    
+        f = log_file.format(cls)
+        if os.path.exists(f):
+            os.remove(f)
     
     for filename, classes, boxes, scores in zip(list_filename, list_classes, list_boxes, list_scores):    
         for cls, box, score in zip(classes, boxes, scores):
@@ -254,6 +261,9 @@ def inference(model_path, data_path, display = False, save = False):
                     os.path.basename(filename),
                     score,
                     *[coord for coord in box]))
+    
+    evaluate()
+    
     
     # data_paths = glob(dataset_path)
     

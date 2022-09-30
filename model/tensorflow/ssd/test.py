@@ -21,7 +21,7 @@ parser.add_argument('--arch', default='ssd300')
 parser.add_argument('--num-examples', default=-1, type=int)
 parser.add_argument('--pretrained-type', default='specified')
 parser.add_argument('--checkpoint-dir', default='')
-parser.add_argument('--checkpoint-path', default='check_points/ssd/model.h5') # latest
+parser.add_argument('--checkpoint-path', default='check_points/ssd/ssd_epoch_latest.h5') # latest home/workspace/iot_ai_model/check_points/ssd/ssd_epoch_latest.h5
 parser.add_argument('--gpu-id', default='0')
 
 args = parser.parse_args()
@@ -109,6 +109,13 @@ if __name__ == '__main__':
     os.makedirs('check_points/ssd/outputs/detects', exist_ok=True)
     visualizer = ImageVisualizer(info['idx_to_name'], save_dir='check_points/ssd/outputs/images')
     
+    log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
+    
+    for cls in range(10):
+        f = log_file.format(cls)
+        if os.path.exists(f):
+            os.remove(f)
+    
     print('run inferencing')
     progress = tqdm(batch_generator, total=info['length'], desc='Testing...', unit='images')
     for i, (filename, _, imgs, gt_confs, gt_locs) in enumerate(progress):
@@ -119,12 +126,11 @@ if __name__ == '__main__':
         # break
         visualizer.save_image(original_image, boxes, classes, '{:d}'.format(i))
 
-        log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
-
         for cls, box, score in zip(classes, boxes, scores):
             cls_name = info['idx_to_name'][cls - 1]
             with open(log_file.format(cls_name), 'a') as f:
                 f.write('{} {} {} {} {} {}\n'.format(
-                    filename,
+                    os.path.basename(filename),
                     score,
                     *[coord for coord in box]))
+                

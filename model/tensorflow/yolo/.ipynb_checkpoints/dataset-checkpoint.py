@@ -6,7 +6,7 @@ import cv2
 import random
 import numpy as np
 import tensorflow as tf
-import model.tensorflow.yolo.utils as utils
+import utils
 # from model.tensorflow.yolo.config import cfg
 
 

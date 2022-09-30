@@ -5,7 +5,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--detect-dir', default='check_points/ssd/outputs/detects')
+parser.add_argument('--detect-dir', default='check_points/yolo/outputs/detects')
 args = parser.parse_args()
 
 def compute_ap(rec, prec):
@@ -88,7 +88,7 @@ def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
     return recall, precision, ap
 
 
-def evaluate():
+if __name__ == '__main__':
     aps = {
         '0': 0.0,
         '1': 0.0,
@@ -127,7 +127,3 @@ def evaluate():
     aps['mAP'] = np.mean(aps['mAP'])
     for key, value in aps.items():
         print('{}: {}'.format(key, value))
-
-if __name__ == '__main__':
-    evaluate()
-    

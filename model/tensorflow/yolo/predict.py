@@ -112,7 +112,6 @@ def bbox_iou(box1, box2):
     return iou
 
 
-
 if __name__ == '__main__':
     annot_path = 'dataset/server_room/test_digit.txt'
     
@@ -161,6 +160,18 @@ if __name__ == '__main__':
                     if iou >= cur_iou:
                         pred_label[i] = int(classes[batch_idx][j])
                         cur_iou = iou
+                        
+                        
+#             log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
+
+#             for cls, box, score in zip(classes, boxes, scores):
+#                 cls_name = info['idx_to_name'][cls - 1]
+#                 with open(log_file.format(cls_name), 'a') as f:
+#                     f.write('{} {} {} {} {} {}\n'.format(
+#                         filename,
+#                         score,
+#                         *[coord for coord in box]))
+
 
             preds += pred_label.tolist()
             
