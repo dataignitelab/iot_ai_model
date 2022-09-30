@@ -218,10 +218,10 @@ def inference(model_path, data_path, display = False, save = False):
         # break
         
         if display:
-            visualizer.display_image(org_img, boxes, out_labels, '{:d}'.format(idx))
+            visualizer.display_image(org_img, out_boxes, out_labels, '{:d}'.format(idx))
         
         if save:
-            visualizer.save_image(org_img, boxes, out_labels, '{:d}'.format(idx))
+            visualizer.save_image(org_img, out_boxes, out_labels, '{:d}'.format(idx))
         idx = idx + 1
     
     if(display):
