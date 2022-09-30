@@ -118,8 +118,8 @@ def inference(model_path, data_path, display = False, save = False):
         
         preds = model(img)
         
-        locs = preds[1].reshape(-1, 4)[:1000,:]
-        confs = preds[0].reshape(-1, 10)[:1000,:]
+        locs = preds[1].reshape(-1, 4)
+        confs = preds[0].reshape(-1, 10)
         
         out_boxes = []
         out_labels = []
