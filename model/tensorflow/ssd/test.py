@@ -119,12 +119,12 @@ if __name__ == '__main__':
         # break
         visualizer.save_image(original_image, boxes, classes, '{:d}'.format(i))
 
-#         log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
+        log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
 
-#         for cls, box, score in zip(classes, boxes, scores):
-#             cls_name = info['idx_to_name'][cls - 1]
-#             with open(log_file.format(cls_name), 'a') as f:
-#                 f.write('{} {} {} {} {} {}\n'.format(
-#                     filename,
-#                     score,
-#                     *[coord for coord in box]))
+        for cls, box, score in zip(classes, boxes, scores):
+            cls_name = info['idx_to_name'][cls - 1]
+            with open(log_file.format(cls_name), 'a') as f:
+                f.write('{} {} {} {} {} {}\n'.format(
+                    filename,
+                    score,
+                    *[coord for coord in box]))

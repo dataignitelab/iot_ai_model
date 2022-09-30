@@ -40,6 +40,7 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']
+labels = ['0','1','2','3','4','5','6','7','8','9']
 
 NUM_CLASSES = 11
 BATCH_SIZE = 1
@@ -145,7 +146,6 @@ class TrtModel:
 
 def inference(model_path, data_path, display = False, save = False):
     logger.info('model loading.. {}'.format(model_path))
-    labels = ["defect", "normal"]
     batch_size = 1
     
     model = TrtModel(model_path)
@@ -166,9 +166,14 @@ def inference(model_path, data_path, display = False, save = False):
     voc = VOCDataset(data_path, default_boxes,
                      config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
     
-    visualizer = ImageVisualizer(['0','1','2','3','4','5','6','7','8','9'], save_dir='check_points/ssd/outputs/images')
+    visualizer = ImageVisualizer(labels, save_dir='check_points/ssd/outputs/images')
     
     idx = 0
+    
+    list_filename = []
+    list_classes = []
+    list_boxes = []
+    list_scores = []
     
     for filename, org_img, img, gt_confs, gt_locs in tqdm(voc.generate()):
         img = np.expand_dims(img, 0)
@@ -181,14 +186,14 @@ def inference(model_path, data_path, display = False, save = False):
         locs = locs.reshape((8732, 4))
         
         confs = softmax(confs)
-        # classes = np.argmax(confs, axis=-1)
-        # scores = np.max(confs, axis=-1)
+        classes = np.argmax(confs, axis=-1)
+        scores = np.max(confs, axis=-1)
         
         boxes = decode(default_boxes, locs)
         
         out_boxes = []
         out_labels = []
-        # out_scores = []
+        out_scores = []
         
         for c in range(1, NUM_CLASSES):
             cls_scores = confs[:, c]
@@ -200,33 +205,55 @@ def inference(model_path, data_path, display = False, save = False):
 
             nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 15)
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
-            # cls_scores = np.take(cls_scores, nms_idx, axis=0)
+            cls_scores = np.take(cls_scores, nms_idx, axis=0)
             cls_labels = [c] * cls_boxes.shape[0]
 
             out_boxes.append(cls_boxes)
             out_labels.extend(cls_labels)
-            # out_scores.append(cls_scores)
+            out_scores.append(cls_scores)
 
         out_boxes = np.concatenate(out_boxes, axis=0)
-        # out_scores = np.concatenate(out_scores, axis=0)
+        out_scores = np.concatenate(out_scores, axis=0)
 
         # boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
-        classes = out_labels # np.array(out_labels)
+        # classes = out_labels # np.array(out_labels)
         # scores = out_scores
         
         out_boxes *= org_img.size * 2
-        out_boxes = out_boxes.astype(dtype=np.int16)
+        boxes = out_boxes.astype(dtype=np.int16)
         # break
         
         if display:
-            visualizer.display_image(org_img, out_boxes, out_labels, '{:d}'.format(idx))
+            visualizer.display_image(org_img, boxes, out_labels, '{:d}'.format(idx))
         
         if save:
-            visualizer.save_image(org_img, out_boxes, out_labels, '{:d}'.format(idx))
+            visualizer.save_image(org_img, boxes, out_labels, '{:d}'.format(idx))
         idx = idx + 1
+        
+        list_filename.append(filename)
+        list_classes.append(out_labels)
+        list_boxes.append(boxes)
+        list_scores.append(out_scores)
     
     if(display):
         cv2.destroyAllWindows()
+        
+    log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
+    logger.info('calcurate mAP.. {}'.format(model_path))
+    
+    for cls in labels:
+        if os.path.exists(cls):
+            os.remove(log_file.format(cls))
+    
+    
+    for filename, classes, boxes, scores in zip(list_filename, list_classes, list_boxes, list_scores):    
+        for cls, box, score in zip(classes, boxes, scores):
+            cls_name = labels[cls - 1]
+            with open(log_file.format(cls_name), 'a') as f:
+                f.write('{} {} {} {} {} {}\n'.format(
+                    os.path.basename(filename),
+                    score,
+                    *[coord for coord in box]))
     
     # data_paths = glob(dataset_path)
     
