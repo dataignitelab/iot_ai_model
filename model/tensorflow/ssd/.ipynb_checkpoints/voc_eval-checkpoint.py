@@ -1,12 +1,6 @@
 import os
 import numpy as np
 import xml.etree.ElementTree as ET
-import argparse
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--detect-dir', default='check_points/ssd/outputs/detects')
-args = parser.parse_args()
 
 def compute_ap(rec, prec):
     ap = 0.0
@@ -88,7 +82,7 @@ def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
     return recall, precision, ap
 
 
-def evaluate():
+def evaluate(detect_dir = 'check_points/ssd/outputs/detects'):
     aps = {
         '0': 0.0,
         '1': 0.0,
@@ -117,7 +111,7 @@ def evaluate():
                 anno[filename].append(box.split(','))
                 
     for cls_name in aps.keys():
-        det_path = os.path.join(args.detect_dir, '{}.txt')
+        det_path = os.path.join(detect_dir, '{}.txt')
         
         if os.path.exists(det_path.format(cls_name)):
             recall, precision, ap = model_eval(det_path.format(cls_name), anno, cls_name)
