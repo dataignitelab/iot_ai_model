@@ -46,8 +46,6 @@ def createModeForTRT(num_class, input_size, strides, anchors, xyscale):
             bbox_tensor = decode_trt(fm, input_size // 16, num_class, strides, anchors, i, xyscale)
         elif i == 1:
             bbox_tensor = decode_trt(fm, input_size // 32, num_class, strides, anchors, i, xyscale)
-        # else:
-        #     bbox_tensor = decode_train(fm, INPUT_SIZE // 32, NUM_CLASS, STRIDES, ANCHORS, i, XYSCALE)
 
         bbox_tensors.append(fm)
         bbox_tensors.append(bbox_tensor)

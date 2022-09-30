@@ -110,12 +110,11 @@ def inference(model_path, data_path, display = False, save = False):
 
         preds = model(img)
         
-        # print(len(preds))
         # print(preds[0].shape, preds[1].shape, preds[2].shape, preds[3].shape, preds[4].shape, preds[5].shape)
         # break
         
-        locs = preds[2].reshape(-1, 4) # np.concatenate([preds[2].reshape(-1, 4), preds[5].reshape(-1, 4)], axis=0)
-        confs = preds[1].reshape(-1, 10) # np.concatenate([preds[1].reshape(-1, 10), preds[4].reshape(-1, 10)], axis=0)
+        locs = preds[1].reshape(-1, 4) # np.concatenate([preds[2].reshape(-1, 4), preds[5].reshape(-1, 4)], axis=0)
+        confs = preds[0].reshape(-1, 10) # np.concatenate([preds[1].reshape(-1, 10), preds[4].reshape(-1, 10)], axis=0)
         classes = np.argmax(confs, axis=-1)
         scores = np.max(confs, axis=-1)
         

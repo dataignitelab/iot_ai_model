@@ -30,6 +30,11 @@ if __name__ == '__main__':
     # model.load_weights( './check_points/yolo/400_best')
     model.load_weights('./check_points/yolo/yoloy_model.h5')
     
+    output1 = model.layers[-4].output
+    output2 = model.layers[-3].output
+    input = model.layers[0].input
+    model = tf.keras.Model(input, [output1, output2])
+    
     input_signature = [tf.TensorSpec([1, input_size, input_size, 3], tf.float32, name='x')]
     onnx_model, external_tensor_storage = tf2onnx.convert.from_keras(model, input_signature)
     
