@@ -110,8 +110,14 @@ def inference(model_path, data_path, display = False, save = False):
 
         preds = model(img)
         
-        box_list = []
-        conf_list = []
+        # print(len(preds))
+        # print(preds[0].shape, preds[1].shape, preds[2].shape, preds[3].shape, preds[4].shape, preds[5].shape)
+        # break
+        
+        locs = np.concatenate([preds[2].reshape(-1, 4), preds[5].reshape(-1, 4)], 0)
+        confs = np.concatenate([preds[1].reshape(-1, 10), preds[4].reshape(-1, 10)], 0)
+        # box_list = []
+        # conf_list = []
 #         for idx, output in enumerate(preds):
 #             if idx % 2 == 0 : continue
 #             output = output.reshape(-1, 15)
@@ -123,19 +129,21 @@ def inference(model_path, data_path, display = False, save = False):
 #         locs = np.concatenate([box_list[0], box_list[1]], 0)
 #         confs = np.concatenate([conf_list[0], conf_list[1]], 0)
         
-        p1 = preds[1].reshape(-1, 15)
-        p2 = preds[3].reshape(-1, 15)
-        p1 = p1[p1[:,4] > 0.5]
-        p2 = p2[p2[:,4] > 0.5]
+        # pred_xywh, pred_prob pred_xywh, pred_prob
     
-        output = np.concatenate([p1, p2], 0)
+        # p1 = preds[0].reshape(-1, 15)
+        # p2 = preds[1].reshape(-1, 15)
+        # p1 = p1[p1[:,4] > 0.5]
+        # p2 = p2[p2[:,4] > 0.5]
+    
+        # output = np.concatenate([p1, p2], 0)
         # output = np.concatenate([preds[1].reshape(-1, 15), preds[3].reshape(-1, 15)], 0)
         # output = output[output[:,4] > 0.5]
         
-        locs = output[:, :4]
-        confs = output[:, 4:]
+        # locs = output[:, :4]
+        # confs = output[:, 4:]
             
-        confs =  confs[:, 1:] * confs[:, :1]
+        # confs =  confs[:, 1:] * confs[:, :1]
         locs[:, [0,1]] = locs[:, [0,1]] - (locs[:, [2,3]] / 2)
         locs[:, [2,3]] = locs[:, [2,3]] + locs[:, [0,1]]
         

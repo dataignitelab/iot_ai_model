@@ -35,6 +35,25 @@ def createModel(num_class, input_size, strides, anchors, xyscale):
     
     return model
 
+
+def createModeForTRT(num_class, input_size, strides, anchors, xyscale):
+    input_layer = tf.keras.layers.Input([input_size, input_size, 3])
+
+    feature_maps = YOLO(input_layer, num_class)
+    bbox_tensors = []
+    for i, fm in enumerate(feature_maps):
+        if i == 0:
+            bbox_tensor = decode_trt(fm, input_size // 16, num_class, strides, anchors, i, xyscale)
+        elif i == 1:
+            bbox_tensor = decode_trt(fm, input_size // 32, num_class, strides, anchors, i, xyscale)
+
+        bbox_tensors.append(fm)
+        bbox_tensors.append(bbox_tensor)
+
+    model = tf.keras.Model(input_layer, bbox_tensors)
+    
+    return model
+
 def YOLO(input_layer, NUM_CLASS):
     route_1, conv = backbone.cspdarknet53_tiny(input_layer) #  route_1 =  tf.nn.leaky_relu_48, conv = tf.nn.leaky_relu_49
 

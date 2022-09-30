@@ -8,7 +8,7 @@ import tf2onnx
 import logging
 from time import time 
 
-from yolo import createModel
+from yolo import createModeForTRT
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     strides = [16, 32]
     xyscale = [1.05, 1.05]
 
-    model = createModel(num_class, input_size, strides, anchors, xyscale)
+    model = createModeForTRT(num_class, input_size, strides, anchors, xyscale)
     # model.load_weights( './check_points/yolo/400_best')
     model.load_weights('./check_points/yolo/yoloy_model.h5')
     
