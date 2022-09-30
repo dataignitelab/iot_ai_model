@@ -1,37 +1,21 @@
+# fp16 으로 변환 해야 성능 손실 적음
 
 import os
 import numpy as np
-# import tensorflow as tf
 from PIL import Image
 
-import tensorrt as trt
-import pycuda.driver as cuda
-import pycuda.autoinit
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
-import torch
-from torchvision import transforms 
-from torchmetrics import F1Score
 import logging
-
 import cv2
 import argparse
-import tensorflow as tf
 import os
 import sys
 import numpy as np
-import yaml
 from tqdm import tqdm
 
-from anchor import generate_default_boxes
-from box_utils_numpy import decode, compute_nms
-from voc_data import VOCDataset
+from tensorrt_model import TrtModel
+from box_utils_numpy import compute_nms
 from image_utils import ImageVisualizer
-from losses import create_losses
-from network import create_ssd
-from voc_eval import evaluate
-from PIL import Image
+from eval import evaluate
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -44,9 +28,9 @@ INPUT_SIZE = 416
 NUM_CLASS = 10
 EPOCHS = 100
 BATCH_SIZE = 64
-IOU_LOSS_THRESH = 0.3
+IOU_THRESHOLD = 0.3
 
-CLASSES = ['0','1','2','3','4','5','6','7','8','9']
+labels = ['0','1','2','3','4','5','6','7','8','9']
 ANCHORS        = [23,27, 37,58, 81,82, 81,82, 135,169, 344,319]
 STRIDES       =  [16, 32]
 XYSCALE       = [1.05, 1.05]
@@ -89,155 +73,73 @@ def softmax(x, axis=1):
     sum = np.sum(e_x,axis=axis,keepdims=True) #returns sum of each row and keeps same dims
     f_x = e_x / sum 
     return f_x
-
-# def softmax(x):
-
-#     y = np.exp(x - np.max(x))
-#     f_x = y / np.sum(np.exp(x))
-#     return f_x
         
-        
-class HostDeviceMem(object):
-    def __init__(self, host_mem, device_mem):
-        self.host = host_mem
-        self.device = device_mem
-
-    def __str__(self):
-        return "Host:\n" + str(self.host) + "\nDevice:\n" + str(self.device)
-
-    def __repr__(self):
-        return self.__str__()
-
-class TrtModel:
-    
-    def __init__(self,engine_path,max_batch_size=1,dtype=np.float32):
-        
-        self.engine_path = engine_path
-        self.dtype = dtype
-        self.logger = trt.Logger(trt.Logger.WARNING)
-        self.runtime = trt.Runtime(self.logger)
-        self.engine = self.load_engine(self.runtime, self.engine_path)
-        self.max_batch_size = max_batch_size
-        self.inputs, self.outputs, self.bindings, self.stream = self.allocate_buffers()
-        self.context = self.engine.create_execution_context()
-
-                
-                
-    @staticmethod
-    def load_engine(trt_runtime, engine_path):
-        trt.init_libnvinfer_plugins(None, "")
-        print('load', engine_path)
-        with open(engine_path, 'rb') as f:
-            engine_data = f.read()
-        engine = trt_runtime.deserialize_cuda_engine(engine_data)
-        return engine
-    
-    def allocate_buffers(self):
-        
-        inputs = []
-        outputs = []
-        bindings = []
-        stream = cuda.Stream()
-        
-        for binding in self.engine:
-            size = trt.volume(self.engine.get_binding_shape(binding)) * self.max_batch_size
-            host_mem = cuda.pagelocked_empty(size, self.dtype)
-            device_mem = cuda.mem_alloc(host_mem.nbytes)
-            
-            bindings.append(int(device_mem))
-
-            if self.engine.binding_is_input(binding):
-                inputs.append(HostDeviceMem(host_mem, device_mem))
-            else:
-                outputs.append(HostDeviceMem(host_mem, device_mem))
-        
-        return inputs, outputs, bindings, stream
-       
-            
-    def __call__(self,x:np.ndarray,batch_size=1):
-        
-        x = x.astype(self.dtype)
-        
-        np.copyto(self.inputs[0].host,x.ravel())
-        
-        for inp in self.inputs:
-            cuda.memcpy_htod_async(inp.device, inp.host, self.stream)
-        
-        self.context.execute_async(batch_size=batch_size, bindings=self.bindings, stream_handle=self.stream.handle)
-        for out in self.outputs:
-            cuda.memcpy_dtoh_async(out.host, out.device, self.stream) 
-            
-        
-        self.stream.synchronize()
-        return [out.host.reshape(batch_size,-1) for out in self.outputs]
-
-
 def inference(model_path, data_path, display = False, save = False):
     logger.info('model loading.. {}'.format(model_path))
     batch_size = 1
     
     model = TrtModel(model_path)
     shape = model.engine.get_binding_shape(0)
+    visualizer = ImageVisualizer(labels, save_dir='check_points/yolo/outputs/images')
     
-    
-    with open('model/tensorflow/ssd/config.yml') as f:
-        cfg = yaml.load(f, Loader=yaml.Loader)
-
-    try:
-        config = cfg[args.arch.upper()]
-    except AttributeError:
-        raise ValueError('Unknown architecture: {}'.format(args.arch))
-    
-    use_tensor = False
-    default_boxes = generate_default_boxes(config, use_tensor = use_tensor)
-    
-    voc = VOCDataset(data_path, default_boxes,
-                     config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
-    
-    visualizer = ImageVisualizer(labels, save_dir='check_points/ssd/outputs/images')
-    
-    idx = 0
+    image_idx = 0
     
     list_filename = []
     list_classes = []
     list_boxes = []
     list_scores = []
     
-    for filename, org_img, img, gt_confs, gt_locs in tqdm(voc.generate()):
+    with open(data_path, 'r') as anno:
+        lines = anno.readlines()
+    
+    dir_path = os.path.dirname(data_path)
+    for row in tqdm(lines):
+        col = row.split()
+        filename = os.path.join(dir_path, col[0])
         
-        org_img = Image.open(filename)
-        img = np.array(org_img.resize(
-                (self.new_size, self.new_size)), dtype=np.float32)
-        img = (img / 127.0) - 1.0
+        org_img = cv2.imread(filename)
+        h,w,_ = org_img.shape
+        org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
+        img = img / 255.
+        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+
+        preds = model(img)
+        
+        box_list = []
+        conf_list = []
+        for idx, output in enumerate(preds):
+            if idx % 2 == 0 : continue
+            output = output.reshape(-1, 15)
+            boxes = output[:, 0:4]
+            pred_conf = output[:, 4:]
+            box_list.append(boxes)
+            conf_list.append(pred_conf)
             
+        locs = np.concatenate([box_list[0], box_list[1]], 0)
+        confs = np.concatenate([conf_list[0], conf_list[1]], 0)
             
-        img = np.expand_dims(img, 0)
-        confs, locs = model(img)
-        # confs = np.squeeze(confs, 0)
-        # locs = np.squeeze(locs, 0)
+        confs =  confs[:, 1:] * confs[:, :1]
+        locs[:, [0,1]] = locs[:, [0,1]] - (locs[:, [2,3]] / 2)
+        locs[:, [2,3]] = locs[:, [2,3]] + locs[:, [0,1]]
         
-        confs = confs.reshape((8732, 11))
-        locs = locs.reshape((8732, 4))
-        
-        confs = softmax(confs)
+        locs = locs / INPUT_SIZE * [w,h,w,h]
+
         classes = np.argmax(confs, axis=-1)
         scores = np.max(confs, axis=-1)
-        
-        boxes = decode(default_boxes, locs)
         
         out_boxes = []
         out_labels = []
         out_scores = []
         
-        for c in range(1, NUM_CLASSES):
+        for c in range(0, NUM_CLASS):
             cls_scores = confs[:, c]
 
-            score_idx = cls_scores > 0.4
-            
-            cls_boxes = boxes[score_idx]
+            score_idx = cls_scores > 0.1
+            cls_boxes = locs[score_idx]
             cls_scores = cls_scores[score_idx]
-
-            nms_idx = compute_nms(cls_boxes, cls_scores, 0.1, 100)
+            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 100)
+            
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
             cls_scores = np.take(cls_scores, nms_idx, axis=0)
             cls_labels = [c] * cls_boxes.shape[0]
@@ -245,15 +147,10 @@ def inference(model_path, data_path, display = False, save = False):
             out_boxes.append(cls_boxes)
             out_labels.extend(cls_labels)
             out_scores.append(cls_scores)
-
+            
         out_boxes = np.concatenate(out_boxes, axis=0)
         out_scores = np.concatenate(out_scores, axis=0)
 
-        boxes = np.minimum(np.maximum(out_boxes, 0.0), 1.0)
-        # classes = out_labels # np.array(out_labels)
-        # scores = out_scores
-        
-        out_boxes *= org_img.size * 2
         boxes = out_boxes.astype(dtype=np.int16)
         # break
         
@@ -261,8 +158,8 @@ def inference(model_path, data_path, display = False, save = False):
             visualizer.display_image(org_img, boxes, out_labels, '{:d}'.format(idx))
         
         if save:
-            visualizer.save_image(org_img, boxes, out_labels, '{:d}'.format(idx))
-        idx = idx + 1
+            visualizer.save_image(org_img, boxes, out_labels, '{:d}'.format(image_idx))
+        image_idx = image_idx + 1
         
         list_filename.append(filename)
         list_classes.append(out_labels)
@@ -273,7 +170,7 @@ def inference(model_path, data_path, display = False, save = False):
     if(display):
         cv2.destroyAllWindows()
         
-    log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
+    log_file = os.path.join('check_points/yolo/outputs/detects', '{}.txt')
     logger.info('calcurate mAP.. {}')
     
     for cls in labels:
@@ -283,7 +180,7 @@ def inference(model_path, data_path, display = False, save = False):
     
     for filename, classes, boxes, scores in zip(list_filename, list_classes, list_boxes, list_scores):    
         for cls, box, score in zip(classes, boxes, scores):
-            cls_name = labels[cls - 1]
+            cls_name = labels[cls]
             with open(log_file.format(cls_name), 'a') as f:
                 f.write('{} {} {} {} {} {}\n'.format(
                     os.path.basename(filename),

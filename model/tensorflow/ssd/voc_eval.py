@@ -94,7 +94,6 @@ def evaluate(detect_dir = 'check_points/ssd/outputs/detects'):
         '7': 0.0,
         '8': 0.0,
         '9': 0.0,
-        '0': 0.0,
         'mAP': []
     }
     

@@ -1,12 +1,6 @@
 import os
 import numpy as np
 import xml.etree.ElementTree as ET
-import argparse
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--detect-dir', default='check_points/yolo/outputs/detects')
-args = parser.parse_args()
 
 def compute_ap(rec, prec):
     ap = 0.0
@@ -71,7 +65,7 @@ def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
             ious = inters / uni
             iou_max = np.max(ious)
             jmax = np.argmax(ious)
-
+        # print(gt_box , box)
         if iou_max > iou_thresh:
             tp[d] = 1.0
         else:
@@ -88,7 +82,7 @@ def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
     return recall, precision, ap
 
 
-if __name__ == '__main__':
+def evaluate(detect_dir = 'check_points/yolo/outputs/detects'):
     aps = {
         '0': 0.0,
         '1': 0.0,
@@ -100,7 +94,6 @@ if __name__ == '__main__':
         '7': 0.0,
         '8': 0.0,
         '9': 0.0,
-        '0': 0.0,
         'mAP': []
     }
     
@@ -117,7 +110,7 @@ if __name__ == '__main__':
                 anno[filename].append(box.split(','))
                 
     for cls_name in aps.keys():
-        det_path = os.path.join(args.detect_dir, '{}.txt')
+        det_path = os.path.join(detect_dir, '{}.txt')
         
         if os.path.exists(det_path.format(cls_name)):
             recall, precision, ap = model_eval(det_path.format(cls_name), anno, cls_name)
@@ -127,3 +120,7 @@ if __name__ == '__main__':
     aps['mAP'] = np.mean(aps['mAP'])
     for key, value in aps.items():
         print('{}: {}'.format(key, value))
+
+if __name__ == '__main__':
+    evaluate()
+    
