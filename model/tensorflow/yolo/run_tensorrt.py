@@ -104,10 +104,9 @@ def inference(model_path, data_path, display = False, save = False):
         org_img = cv2.imread(filename)
         h,w,_ = org_img.shape
         org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE)).astype(np.float32)
-        img = img / 255.
+        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
+        img = img.astype(np.float32) / 255.
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-
         preds = model(img)
         
         # print(preds[0].shape, preds[1].shape, preds[2].shape, preds[3].shape, preds[4].shape, preds[5].shape)
@@ -115,8 +114,8 @@ def inference(model_path, data_path, display = False, save = False):
         
         locs = preds[1].reshape(-1, 4) # np.concatenate([preds[2].reshape(-1, 4), preds[5].reshape(-1, 4)], axis=0)
         confs = preds[0].reshape(-1, 10) # np.concatenate([preds[1].reshape(-1, 10), preds[4].reshape(-1, 10)], axis=0)
-        classes = np.argmax(confs, axis=-1)
-        scores = np.max(confs, axis=-1)
+        # classes = np.argmax(confs, axis=-1)
+        # scores = np.max(confs, axis=-1)
         
         # box_list = []
         # conf_list = []
