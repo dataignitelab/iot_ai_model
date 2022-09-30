@@ -105,7 +105,6 @@ def inference(model_path, data_path, display = False, save = False):
         # img = np.array(org_img.resize((INPUT_SIZE, INPUT_SIZE)), dtype= np.float)
         
         org_img = cv2.imread(filename)
-        h,w,_ = org_img.shape
         org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
         img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
         img = img.astype(np.float32) / 255.
@@ -115,44 +114,12 @@ def inference(model_path, data_path, display = False, save = False):
         f.append(filename)
         
     for img,filename,org_img in tqdm(zip(d,f,o)):
+        h,w,_ = org_img.shape
+        
         preds = model(img)
         
-        # print(preds[0].shape, preds[1].shape, preds[2].shape, preds[3].shape, preds[4].shape, preds[5].shape)
-        # break
-        
-        locs = preds[1].reshape(-1, 4) # np.concatenate([preds[2].reshape(-1, 4), preds[5].reshape(-1, 4)], axis=0)
-        confs = preds[0].reshape(-1, 10) # np.concatenate([preds[1].reshape(-1, 10), preds[4].reshape(-1, 10)], axis=0)
-        # classes = np.argmax(confs, axis=-1)
-        # scores = np.max(confs, axis=-1)
-        
-        # box_list = []
-        # conf_list = []
-#         for idx, output in enumerate(preds):
-#             if idx % 2 == 0 : continue
-#             output = output.reshape(-1, 15)
-#             boxes = output[:, 0:4]
-#             pred_conf = output[:, 4:]
-#             box_list.append(boxes)
-#             conf_list.append(pred_conf)
-            
-#         locs = np.concatenate([box_list[0], box_list[1]], 0)
-#         confs = np.concatenate([conf_list[0], conf_list[1]], 0)
-        
-        # pred_xywh, pred_prob pred_xywh, pred_prob
-    
-        # p1 = preds[0].reshape(-1, 15)
-        # p2 = preds[1].reshape(-1, 15)
-        # p1 = p1[p1[:,4] > 0.5]
-        # p2 = p2[p2[:,4] > 0.5]
-    
-        # output = np.concatenate([p1, p2], 0)
-        # output = np.concatenate([preds[1].reshape(-1, 15), preds[3].reshape(-1, 15)], 0)
-        # output = output[output[:,4] > 0.5]
-        
-        # locs = output[:, :4]
-        # confs = output[:, 4:]
-            
-        # confs =  confs[:, 1:] * confs[:, :1]
+        locs = preds[1].reshape(-1, 4)
+        confs = preds[0].reshape(-1, 10)
         
         out_boxes = []
         out_labels = []
@@ -183,19 +150,19 @@ def inference(model_path, data_path, display = False, save = False):
         out_scores = np.concatenate(out_scores, axis=0)
 
         out_boxes = out_boxes / INPUT_SIZE  * [w,h,w,h]
-        boxes = out_boxes.astype(dtype=int)
+        out_boxes = out_boxes.astype(dtype=int)
         
         if display:
-            visualizer.display_image(org_img, boxes, out_labels, '{:d}'.format(image_idx))
+            visualizer.display_image(org_img, out_boxes, out_labels, '{:d}'.format(image_idx))
         
         if save:
-            visualizer.save_image(org_img, boxes, out_labels, '{:d}'.format(image_idx))
+            visualizer.save_image(org_img, out_boxes, out_labels, '{:d}'.format(image_idx))
             
         image_idx = image_idx + 1
         
         list_filename.append(filename)
         list_classes.append(out_labels)
-        list_boxes.append(boxes)
+        list_boxes.append(out_boxes)
         list_scores.append(out_scores)
         
     
