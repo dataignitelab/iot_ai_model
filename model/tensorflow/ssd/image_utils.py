@@ -106,7 +106,7 @@ class ImageVisualizer(object):
             color = palette[idx]
 
             cv2.rectangle(image, (top_left[0], top_left[1]), (bot_right[0], bot_right[1]), color, 1)
-            cv2.rectangle(image, (top_left[0], top_left[1]-10), (top_left[0]+40,top_left[1]), color, -1)
+            cv2.rectangle(image, (top_left[0], top_left[1]-10), (top_left[0]+10,top_left[1]), color, -1)
             cv2.putText(image, '{}'.format(cls_name), (top_left[0], top_left[1]-1), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1)
             cv2.imshow('img', image)
             cv2.waitKey(1)

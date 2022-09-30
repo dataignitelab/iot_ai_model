@@ -15,6 +15,7 @@ from torchvision import transforms
 from torchmetrics import F1Score
 import logging
 
+import cv2
 import argparse
 import tensorflow as tf
 import os
@@ -196,7 +197,7 @@ def inference(model_path, data_path, display = False):
             cls_boxes = boxes[score_idx]
             cls_scores = cls_scores[score_idx]
 
-            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 200)
+            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 20)
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
             cls_scores = np.take(cls_scores, nms_idx, axis=0)
             cls_labels = [c] * cls_boxes.shape[0]
