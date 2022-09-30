@@ -93,6 +93,9 @@ def inference(model_path, data_path, display = False, save = False):
         lines = anno.readlines()
     
     dir_path = os.path.dirname(data_path)
+    d = []
+    f = []
+    o = []
     for row in tqdm(lines):
         col = row.split()
         filename = os.path.join(dir_path, col[0])
@@ -107,6 +110,11 @@ def inference(model_path, data_path, display = False, save = False):
         img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
         img = img.astype(np.float32) / 255.
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        d.append(img)
+        o.append(org_img)
+        f.append(filename)
+        
+    for img,filename,org_img in tqdm(zip(d,f,o)):
         preds = model(img)
         
         # print(preds[0].shape, preds[1].shape, preds[2].shape, preds[3].shape, preds[4].shape, preds[5].shape)
