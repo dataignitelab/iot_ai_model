@@ -174,8 +174,8 @@ def inference(model_path, data_path, display = False, save = False):
         img = np.expand_dims(img, 0)
         confs, locs = model(img)
         
-        confs = np.squeeze(confs, 0)
-        locs = np.squeeze(locs, 0)
+        # confs = np.squeeze(confs, 0)
+        # locs = np.squeeze(locs, 0)
         
         confs = confs.reshape((8732, 11))
         locs = locs.reshape((8732, 4))
@@ -198,7 +198,7 @@ def inference(model_path, data_path, display = False, save = False):
             cls_boxes = boxes[score_idx]
             cls_scores = cls_scores[score_idx]
 
-            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 20)
+            nms_idx = compute_nms(cls_boxes, cls_scores, 0.4, 15)
             cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
             cls_scores = np.take(cls_scores, nms_idx, axis=0)
             cls_labels = [c] * cls_boxes.shape[0]
