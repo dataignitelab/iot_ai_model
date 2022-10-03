@@ -14,7 +14,7 @@ def compute_ap(rec, prec):
     return ap
 
 
-def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
+def model_eval(det_file, anno, cls_name, iou_thresh=0.5):
     with open(det_file, 'r') as f:
         lines = f.readlines()
 
@@ -82,7 +82,7 @@ def model_eval(det_file, anno, cls_name, iou_thresh=0.75):
     return recall, precision, ap
 
 
-def evaluate(detect_dir = 'check_points/ssd/outputs/detects'):
+def evaluate(detect_dir = 'check_points/ssd/outputs/detects', display= False, iou_thresh = 0.5):
     aps = {
         '0': 0.0,
         '1': 0.0,
@@ -113,13 +113,18 @@ def evaluate(detect_dir = 'check_points/ssd/outputs/detects'):
         det_path = os.path.join(detect_dir, '{}.txt')
         
         if os.path.exists(det_path.format(cls_name)):
-            recall, precision, ap = model_eval(det_path.format(cls_name), anno, cls_name)
+            recall, precision, ap = model_eval(det_path.format(cls_name), anno, cls_name, iou_thresh = iou_thresh)
             aps[cls_name] = ap
             aps['mAP'].append(ap)
 
     aps['mAP'] = np.mean(aps['mAP'])
-    for key, value in aps.items():
-        print('{}: {}'.format(key, value))
+    
+    if (display):
+        print('iou_thresh {}'.format(iou_thresh))
+        for key, value in aps.items():
+            print('{}: {}'.format(key, value))
+
+    return aps
 
 if __name__ == '__main__':
     evaluate()

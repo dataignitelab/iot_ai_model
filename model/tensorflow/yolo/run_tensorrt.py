@@ -11,6 +11,7 @@ import os
 import sys
 import numpy as np
 from tqdm import tqdm
+from time import time
 
 from tensorrt_model import TrtModel
 from box_utils_numpy import compute_nms
@@ -68,9 +69,9 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def softmax(x, axis=1):
-    max = np.max(x,axis=axis,keepdims=True) #returns max of each row and keeps same dims
-    e_x = np.exp(x - max) #subtracts each row with its max value
-    sum = np.sum(e_x,axis=axis,keepdims=True) #returns sum of each row and keeps same dims
+    max = np.max(x,axis=axis,keepdims=True)   # returns max of each row and keeps same dims
+    e_x = np.exp(x - max)                     # subtracts each row with its max value
+    sum = np.sum(e_x,axis=axis,keepdims=True) # returns sum of each row and keeps same dims
     f_x = e_x / sum 
     return f_x
         
@@ -113,7 +114,12 @@ def inference(model_path, data_path, display = False, save = False):
         o.append(org_img)
         f.append(filename)
         
-    for img,filename,org_img in tqdm(zip(d,f,o)):
+    total = len(lines)
+    start_time = time()
+    pre_elap = 0.0
+    fps = 0.0
+        
+    for img,filename,org_img in zip(d,f,o):
         h,w,_ = org_img.shape
         
         preds = model(img)
@@ -152,6 +158,15 @@ def inference(model_path, data_path, display = False, save = False):
         out_boxes = out_boxes / INPUT_SIZE  * [w,h,w,h]
         out_boxes = out_boxes.astype(dtype=int)
         
+        
+        result_str = []
+        for idx in range(len(out_boxes)):
+            box = out_boxes[idx]
+            cls = out_labels[idx]
+            result_str.append( f'{box[0]},{box[1]},{box[2]},{box[3]},{cls}')
+        result_str = ' '.join(result_str)
+        logger.info('{}/{} - {}, Predicted : {} - fps: {:.1f}'.format(image_idx + 1, total, os.path.basename(filename), result_str, fps))
+        
         if display:
             visualizer.display_image(org_img, out_boxes, out_labels, '{:d}'.format(image_idx))
         
@@ -165,12 +180,19 @@ def inference(model_path, data_path, display = False, save = False):
         list_boxes.append(out_boxes)
         list_scores.append(out_scores)
         
+        elap = time() - start_time
+        fps = max(0.0, 1.0 / (elap - pre_elap))
+        pre_elap = elap
+        
+    elap = time() - start_time
+    fps = total / elap
+    
     
     if(display):
         cv2.destroyAllWindows()
         
     log_file = os.path.join('check_points/yolo/outputs/detects', '{}.txt')
-    logger.info('calcurate mAP.. {}')
+    logger.info('calcurate mAP.. ')
     
     for cls in labels:
         f = log_file.format(cls)
@@ -186,69 +208,14 @@ def inference(model_path, data_path, display = False, save = False):
                     score,
                     *[coord for coord in box]))
     
-    evaluate()
+    iou_thresh = 0.70
+    mAP = evaluate(display = False, iou_thresh = iou_thresh)
     
+    for key, value in mAP.items():
+        if key == 'mAP': continue
+        logger.info('Class {}: AP {:.4f}'.format(key, value))
+    logger.info('mAP@{}: {:.4f}, fps: {:.4f}'.format(iou_thresh, mAP['mAP'], fps))
     
-    # data_paths = glob(dataset_path)
-    
-    
-#     logger.info('dataset loading..')
-#     # gen, total = create_batch_generator(data_path)
-#     gen = Dataset(data_path)
-#     total = len(gen)
-    
-#     logger.info('number of test dataset : {}'.format(total))
-    
-#     logger.info('start inferencing')
-#     f1 = F1Score(num_classes=2, threshold=0.5)
-    
-#     preds = []
-#     targets = []
-#     cnt = 0
-    
-#     start_time = time()
-#     pre_elap = 0.0
-#     fps = 0.0
-#     for path, org_img, img, target in gen:
-#         img = np.array([img])
-#         path = np.array([path])
-#         target = np.array([target])
-        
-#         output = model(img, batch_size)
-        
-#         loss = output[0][0]
-#         output = 1 if output[0][0] >= 0.5 else 0
-#         target = int(target[0])
-#         preds.append(output)
-#         targets.append(target)
-
-#         cnt += 1
-        
-#         logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, fps: {:.1f}'.format(cnt, total, path[0], labels[output], labels[target], output == target, fps))
-
-#         if(display):
-#             img = cv2.cvtColor(np.array(org_img), cv2.COLOR_RGB2BGR)
-#             cv2.putText(img, 'Result: {}, Correct: {} '.format(labels[output], output == target), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
-#             cv2.putText(img, 'FPS: {:.2f}'.format(fps), (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
-#             cv2.imshow('img', img)
-#             cv2.waitKey(1)
-        
-#         elap = time() - start_time
-#         fps = max(0.0, 1.0 / (elap - pre_elap))
-#         pre_elap = elap
-        
-#     elap = time() - start_time
-#     fps = total / elap
-    
-#     if(display):
-#         cv2.destroyAllWindows()
-
-#     preds = torch.tensor(preds)
-#     targets = torch.tensor(targets)
-#     # acc = (correct/len(dataset))
-#     f1_score = f1(preds, targets) 
-    
-#     logger.info('f1-score : {:.4f}, fps : {:.4f}'.format(float(f1_score), fps))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='yolo')
