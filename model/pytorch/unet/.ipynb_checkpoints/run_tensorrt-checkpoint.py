@@ -4,6 +4,9 @@ from time import time
 import argparse
 import logging
 import os
+import cv2
+import numpy as np
+from PIL import Image
 
 from model import Unet
 from dataset import load_image
@@ -37,6 +40,21 @@ def dice_loss(inputs, targets, smooth=1):
 
     return 1 - dice 
 
+def load_image_(path):
+    image = np.asarray(Image.open(path).resize((256,256)), dtype=np.float32)
+    image = image / 256
+    image = np.transpose(image, (2, 0, 1))
+    return image
+
+
+def load_image(path):
+    img = cv2.imread(path)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (256, 256))
+    img = img.astype(np.float32) / 255.
+    img = np.transpose(img, (2, 0, 1))
+    return img
+
 def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
     batch_size = 1
@@ -60,35 +78,39 @@ def inference(model_path, data_path, display = False):
     targets = []
     cnt = 0
     
-    
     base_dir = os.path.dirname(data_path)
+    imgs = []
+    masks = []
+    filepaths = []
+    
+    for row in tqdm(line):
+        img_path, mask_path = row.rstrip().split(',')
+        
+        img = load_image(os.path.join(base_dir, img_path))
+        mask = load_image(os.path.join(base_dir, mask_path))
+        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        
+        imgs.append(img)
+        masks.append(mask)
+        filepaths.append(os.path.basename(img_path))
     
     start_time = time()
     pre_elap = 0.0
     fps = 0.0
     cost = .0
-    for idx, row in enumerate(line):
-        img_path, mask_path = row.rstrip().split(',')
-        
+    
+    for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
         img = load_image(os.path.join(base_dir, img_path))
-        mask = load_image(os.path.join(base_dir, mask_path))
-        
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        
         output = model(img)
-        
         output = output[0].reshape(img.shape)
-        
-        # loss = output[0][0]
-        # output = 1 if output[0][0] >= 0.5 else 0
-        # target = int(target[0])
-        # preds.append(output)
-        # targets.append(target)
         
         loss = dice_loss(img, output)
         
         cost += loss
         
-        logger.info('{}/{} - {},  fps: {:.1f}'.format(idx+1, total, img_path, fps))
+        logger.info('{}/{} - {},  fps: {:.1f}'.format(idx+1, total, filename, fps))
 
         if(display):
             img = cv2.imread(path[0])
@@ -112,7 +134,7 @@ def inference(model_path, data_path, display = False):
     
     elap = time() - start_time
     fps = total / elap
-    logger.info('dice efficient: {:.4f}, fps: {:.4f}'.format(cost/total, fps))
+    logger.info('dice coefficient: {:.4f}, fps: {:.4f}'.format(cost/total, fps))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='unet')
