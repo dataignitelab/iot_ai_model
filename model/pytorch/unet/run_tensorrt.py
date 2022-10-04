@@ -31,8 +31,6 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
         
 def dice_loss(inputs, targets, smooth=1):
-    inputs[inputs > 0.5] = 1
-    
     inputs = inputs.reshape(-1)
     targets = targets.reshape(-1)
 
@@ -41,6 +39,24 @@ def dice_loss(inputs, targets, smooth=1):
 
     return dice 
 
+def display_image(img, mask):
+    img = img * 255
+    mask[mask > 0.5] = 255
+    mask[mask <= 0.5] = 0
+    
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.astype(np.int16)
+    green = np.zeros_like(mask)
+    green[:,:,1] = mask[:,:,1]
+    img[green >= 255] = img[green >= 255] * 3
+    img[img >= 255] = 255
+
+    other = np.zeros_like(mask)
+    other[:,:,[0,2]] = mask[:,:,[0,2]] 
+    img[other >= 255] = img[other >= 255] * 0.3
+    
+    cv2.imshow('img', img)
+    cv2.waitKey(1)
 
 def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
@@ -93,19 +109,14 @@ def inference(model_path, data_path, display = False):
         output = model(img)
         output = output[0].reshape(img.shape)
         
-        # loss = dice_loss(img, output)
+        loss = dice_loss(img, output)
         
         cost += loss
         
         logger.info('{}/{} - {},  fps: {:.1f}'.format(idx+1, total, filename, fps))
 
         if(display):
-            img = cv2.imread(path[0])
-
-            cv2.putText(img, 'Result: {}, Correct: {} '.format(labels[output], output == target), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
-            cv2.putText(img, 'FPS: {:.2f}'.format(fps), (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1)
-            cv2.imshow('img', img)
-            cv2.waitKey(1)
+            display_image(img, output)
         
         elap = time() - start_time
         fps = max(0.0, 1.0 / (elap - pre_elap))
