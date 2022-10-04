@@ -7,6 +7,7 @@ import os
 import cv2
 import numpy as np
 from PIL import Image
+import base64
 
 from model import Unet
 from dataset import load_image
@@ -31,29 +32,15 @@ def str2bool(v):
         
 def dice_loss(inputs, targets, smooth=1):
     inputs[inputs > 0.5] = 1
-    inputs[inputs <= 0.5] = 0
+    
     inputs = inputs.reshape(-1)
     targets = targets.reshape(-1)
 
     intersection = (inputs * targets).sum()                            
     dice = (2.*intersection + smooth) / (inputs.sum() + targets.sum() + smooth)  
 
-    return 1 - dice 
+    return dice 
 
-def load_image_(path):
-    image = np.asarray(Image.open(path).resize((256,256)), dtype=np.float32)
-    image = image / 256
-    image = np.transpose(image, (2, 0, 1))
-    return image
-
-
-def load_image(path):
-    img = cv2.imread(path)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (256, 256))
-    img = img.astype(np.float32) / 255.
-    img = np.transpose(img, (2, 0, 1))
-    return img
 
 def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
@@ -98,7 +85,7 @@ def inference(model_path, data_path, display = False):
     pre_elap = 0.0
     fps = 0.0
     cost = .0
-    
+    loss = .0
     for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
         img = load_image(os.path.join(base_dir, img_path))
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
@@ -106,7 +93,7 @@ def inference(model_path, data_path, display = False):
         output = model(img)
         output = output[0].reshape(img.shape)
         
-        loss = dice_loss(img, output)
+        # loss = dice_loss(img, output)
         
         cost += loss
         

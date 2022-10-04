@@ -115,26 +115,26 @@ class Unet(nn.Module):
     def __init__(self, **kwargs):
         super(Unet, self).__init__(**kwargs)
         
-        self.encoder1 = EncoderBlock(3, 64, 0.1)
-        self.encoder2 = EncoderBlock(64, 128, 0.1)
-        self.encoder3 = EncoderBlock(128, 256, 0.2)
-        self.encoder4 = EncoderBlock(256, 512, 0.2)
+        self.encoder1 = EncoderBlock(3, 32, 0.1)
+        self.encoder2 = EncoderBlock(32, 64, 0.1)
+        self.encoder3 = EncoderBlock(64, 128, 0.2)
+        self.encoder4 = EncoderBlock(128, 256, 0.2)
         
-        self.center = EncoderBlock(512, 512, 0.3, pooling=False)
+        self.center = EncoderBlock(256, 256, 0.3, pooling=False)
         
-        self.attention4 = AttentionGate(512, 512) 
-        self.decoder4 = DecoderBlock(512, 256, 0.2) 
+        self.attention4 = AttentionGate(256, 256) 
+        self.decoder4 = DecoderBlock(256, 128, 0.2) 
         
-        self.attention3 = AttentionGate(256, 256) 
-        self.decoder3 = DecoderBlock(256, 128, 0.2)  
+        self.attention3 = AttentionGate(128, 128) 
+        self.decoder3 = DecoderBlock(128, 64, 0.2)  
         
-        self.attention2 = AttentionGate(128, 128)
-        self.decoder2 = DecoderBlock(128, 64, 0.1)
+        self.attention2 = AttentionGate(64, 64)
+        self.decoder2 = DecoderBlock(64, 32, 0.1)
         
-        self.attention1 = AttentionGate(64, 64)
-        self.decoder1 = DecoderBlock(64, 64, 0.1)
+        self.attention1 = AttentionGate(32, 32)
+        self.decoder1 = DecoderBlock(32, 16, 0.1)
         
-        self.final = make_conv2d(64, 3, kernel_size=3, strides=1, padding=1, act='sigmoid')
+        self.final = make_conv2d(16, 3, kernel_size=3, strides=1, padding=1, act='sigmoid')
         
         
     def forward(self, x):

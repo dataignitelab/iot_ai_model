@@ -3,6 +3,11 @@ from tqdm import tqdm
 import numpy as np
 import os
 import cv2
+import random
+
+import torch
+import torchvision.transforms.functional as TF
+from torchvision.transforms import transforms
 
 from torch.utils.data import Dataset
 
@@ -41,4 +46,20 @@ class ImageDataset(Dataset):
         return len(self.path)    
 
     def __getitem__(self, index):
-        return self.path[index], self.images[index], self.masks[index]
+        img = torch.tensor(self.images[index])
+        mask = torch.tensor(self.masks[index])
+
+        if (np.random.random() > 0.5):
+            img = TF.hflip(img)
+            mask = TF.hflip(mask)
+
+        if (np.random.random() > 0.5):
+            img = TF.vflip(img)
+            mask = TF.vflip(mask)
+
+        if np.random.random() > 0.5:
+            angle = np.random.randint(-30, 30)
+            img = TF.rotate(img, angle)
+            mask = TF.rotate(mask, angle)
+        
+        return self.path[index], img, mask
