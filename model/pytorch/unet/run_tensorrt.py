@@ -52,7 +52,7 @@ def display_image(img, mask, local = False):
     mask[mask > 0.5] = 255
     mask[mask <= 0.5] = 0
     
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     img = img.astype(np.int16)
     green = np.zeros_like(mask)
     green[:,:,1] = mask[:,:,1]
