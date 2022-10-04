@@ -39,9 +39,10 @@ def dice_loss(inputs, targets, smooth=1):
 
     return dice 
 
-def display_image(img, mask):
+def display_image(img, mask, local = False):
     img = img[0]
     img = img * 255
+    img = np.minimum(np.maximum(img, 255), 0)
     mask[mask > 0.5] = 255
     mask[mask <= 0.5] = 0
     
