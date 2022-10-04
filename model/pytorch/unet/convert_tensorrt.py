@@ -7,7 +7,7 @@ def run():
                     "--saveEngine=check_points/unet/model.engine",
                     "--verbose",
                     "--workspace=512",
-                    "--best"])
+                    "--fp16"])
 
 if __name__ == '__main__':
     run()

@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch.utils.data import random_split
 
 from model import Unet
-from dataset import ImageDataset
+from dataset import ImageDataset, load_image
 
 import torch
 from model import Unet
@@ -42,8 +42,8 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
         
 def dice_loss(inputs, targets, smooth=1):
-    inputs = inputs.view(-1)
-    targets = targets.view(-1)
+    inputs = inputs.contiguous().view(-1)
+    targets = targets.contiguous().view(-1)
 
     intersection = (inputs * targets).sum()                            
     dice = (2.*intersection + smooth) / (inputs.sum() + targets.sum() + smooth)  
@@ -106,11 +106,40 @@ def inference(model_path, data_path, display = False):
     model.load_state_dict(torch.load(model_path))
     model = model.eval()
     
-    dataset = ImageDataset(data_path, augmentation=False, preload= False)
-    loader = torch.utils.data.DataLoader(dataset, batch_size= BATCH_SIZE, shuffle=False)
+#     dataset = ImageDataset(data_path, augmentation=False, preload= False)
+#     loader = torch.utils.data.DataLoader(dataset, batch_size= BATCH_SIZE, shuffle=False)
     
-    total = len(dataset)
+#     total = len(dataset)
+#     logger.info('number of test dataset : {}'.format(total))
+    
+    with open(data_path, 'r') as f:
+        line = f.readlines()
+
+    total = len(line)
     logger.info('number of test dataset : {}'.format(total))
+    
+    
+    start_time = time()
+    pre_elap = 0.0
+    fps = 0.0
+    cost = .0
+    loss = .0
+    
+    base_dir = os.path.dirname(data_path)
+    imgs = []
+    masks = []
+    filepaths = []
+    
+    for row in tqdm(line):
+        img_path, mask_path = row.rstrip().split(',')
+        img = torch.tensor(load_image(os.path.join(base_dir, img_path))).type(torch.float32)
+        mask = torch.tensor(load_image(os.path.join(base_dir, mask_path))).type(torch.float32)
+        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
+        
+        imgs.append(img)
+        masks.append(mask)
+        filepaths.append(os.path.basename(img_path))
     
     start_time = time()
     pre_elap = 0.0
@@ -119,10 +148,11 @@ def inference(model_path, data_path, display = False):
     loss = .0
     
     with torch.no_grad():
-        for idx, (filename, img, mask) in enumerate(loader):
-            img = img.to(device).type(torch.float32)
-            mask = mask.to(device).type(torch.float32)
-            filename = filename[0]
+        # for idx, (filename, img, mask) in enumerate(loader):
+        for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
+            img = img.to(device)
+            mask = mask.to(device)
+
             output = model(img)
             loss = dice_loss(output, mask)
 
@@ -153,7 +183,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='unet')
     
     parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/unet/model.engine')
-    parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/supervisely_person')
+    parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/supervisely_person/test_data_list.txt')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
     
     args = parser.parse_args()

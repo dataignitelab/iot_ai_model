@@ -38,7 +38,7 @@ def dice_loss(inputs, targets, smooth=1):
     intersection = (inputs * targets).sum()                            
     dice = (2.*intersection + smooth) / (inputs.sum() + targets.sum() + smooth)  
 
-    return dice 
+    return 1-dice 
 
 def display_image(img, mask, local = False):
     img = img[0]
@@ -101,6 +101,7 @@ def inference(model_path, data_path, display = False):
         img = load_image(os.path.join(base_dir, img_path))
         mask = load_image(os.path.join(base_dir, mask_path))
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
         
         imgs.append(img)
         masks.append(mask)
@@ -112,20 +113,21 @@ def inference(model_path, data_path, display = False):
     cost = .0
     loss = .0
     for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
-        img = load_image(os.path.join(base_dir, img_path))
-        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        # img = load_image(os.path.join(base_dir,'images',filename))
+        # img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        
         
         output = model(img)
-        output = output[0].reshape(img.shape)
+        output = output[0].reshape(mask.shape)
         
         loss = dice_loss(output, mask)
         
         cost += loss
         
-        logger.info('{}/{} - {},  fps: {:.1f}, dice loss: {:.1f}'.format(idx+1, total, filename, fps, (1-loss)))
+        logger.info('{}/{} - {},  fps: {:.1f}, dice loss: {:.1f}'.format(idx+1, total, filename, fps, (loss)))
 
         if(display):
-            display_image(img, output)
+            display_image(img, mask)
         
         elap = time() - start_time
         fps = max(0.0, 1.0 / (elap - pre_elap))
