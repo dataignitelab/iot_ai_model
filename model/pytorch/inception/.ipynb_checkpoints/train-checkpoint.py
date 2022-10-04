@@ -23,9 +23,6 @@ logger.addHandler(stream_handler)
 
 checkpoints_path = './didimdol/checkpoints/inception'
 
-def convert_onnx():
-    
-
 def fit(model, dataloader, criterion, optimizer, device, half = False):
     loss = .0
     acc = .0
@@ -54,7 +51,7 @@ def fit(model, dataloader, criterion, optimizer, device, half = False):
         correct += output.eq(target).int().sum()
 
     acc = (correct/len(dataloader.dataset))
-    loss = loss/len(dataloader.dataset)
+    loss = loss/len(dataloader)
     logger.info("{}, duration:{:6.1f}s, acc:{:.4f}, loss:{:.4f}".format(('trn' if model.training else 'val'), 
                                                                          time()-start_time, 
                                                                          acc, 

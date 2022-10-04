@@ -48,11 +48,11 @@ def display_image(img, mask, local = False):
     mask = np.transpose(mask, (1,2,0))
     
     img = img * 255
-    img = np.minimum(np.maximum(img, 255), 0)
+    img = np.minimum(np.maximum(img, 0), 255)
     mask[mask > 0.5] = 255
     mask[mask <= 0.5] = 0
     
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     img = img.astype(np.int16)
     green = np.zeros_like(mask)
     green[:,:,1] = mask[:,:,1]
@@ -118,7 +118,7 @@ def inference(model_path, data_path, display = False):
         output = model(img)
         output = output[0].reshape(img.shape)
         
-        loss = dice_loss(img, output)
+        loss = dice_loss(output, mask)
         
         cost += loss
         

@@ -53,22 +53,23 @@ if __name__ == '__main__':
     # progress = tqdm(dataloader)
     total = len(dataset)
     cnt = 0
-    for path, data, target in dataloader:
-        data = data.to(device)
-        target = target.to(device)
-        output = model(data)
+    with torch.no_grad():
+        for path, data, target in dataloader:
+            data = data.to(device)
+            target = target.to(device)
+            output = model(data)
 
-        loss = output[0,0]
-        output = 1 if output[0,0] >= 0.5 else 0
-        target = int(target[0])
-        preds.append(output)
-        targets.append(target)
+            loss = output[0,0]
+            output = 1 if output[0,0] >= 0.5 else 0
+            target = int(target[0])
+            preds.append(output)
+            targets.append(target)
 
-        cnt += 1
-        elap = time() - start_time
-        fps = cnt / elap
+            cnt += 1
+            elap = time() - start_time
+            fps = cnt / elap
 
-        logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, loss : {}'.format(cnt, total, path[0], labels[output], labels[target], output == target, loss))
+            logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, loss : {}'.format(cnt, total, path[0], labels[output], labels[target], output == target, loss))
 
 #         img = cv2.imread(path[0])
         

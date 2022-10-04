@@ -1,18 +1,28 @@
 from glob import glob
 from tqdm import tqdm
 from time import time
-import argparse
 import logging
 import os
-import cv2
-import numpy as np
-from PIL import Image
-import base64
-# from matplotlib import pyplot as plt
+import argparse
+import torch
+import torch.optim as optim
+import torch.nn as nn
+from torch.utils.data import random_split
 
 from model import Unet
-from dataset import load_image
-from tensorrt_model import TrtModel
+from dataset import ImageDataset
+
+import torch
+from model import Unet
+
+BATCH_SIZE = 1
+EPOCHS = 100
+LR = 0.0001
+
+checkpoints_path = 'check_points/unet'
+data_path = 'dataset/supervisely_person'
+
+paths = glob(os.path.join(data_path,"**/*.png"))
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -32,13 +42,13 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
         
 def dice_loss(inputs, targets, smooth=1):
-    inputs = inputs.reshape(-1)
-    targets = targets.reshape(-1)
+    inputs = inputs.view(-1)
+    targets = targets.view(-1)
 
     intersection = (inputs * targets).sum()                            
     dice = (2.*intersection + smooth) / (inputs.sum() + targets.sum() + smooth)  
 
-    return dice 
+    return 1-dice 
 
 def display_image(img, mask, local = False):
     img = img[0]
@@ -48,11 +58,11 @@ def display_image(img, mask, local = False):
     mask = np.transpose(mask, (1,2,0))
     
     img = img * 255
-    img = np.minimum(np.maximum(img, 0), 255)
+    img = np.minimum(np.maximum(img, 255), 0)
     mask[mask > 0.5] = 255
     mask[mask <= 0.5] = 0
     
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = img.astype(np.int16)
     green = np.zeros_like(mask)
     green[:,:,1] = mask[:,:,1]
@@ -71,19 +81,11 @@ def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
     batch_size = 1
      # os.path.join("..","models","main.trt")
-    model = TrtModel(model_path)
-    shape = model.engine.get_binding_shape(0)
-    
-    # data_paths = glob(dataset_path)
-    
-    
     logger.info('dataset loading..')
    
-    with open(data_path, 'r') as f:
-        line = f.readlines()
+    # with open(data_path, 'r') as f:
+    #     line = f.readlines()
 
-    total = len(line)
-    logger.info('number of test dataset : {}'.format(total))
     
     logger.info('start inferencing')
     preds = []
@@ -95,41 +97,45 @@ def inference(model_path, data_path, display = False):
     masks = []
     filepaths = []
     
-    for row in tqdm(line):
-        img_path, mask_path = row.rstrip().split(',')
-        
-        img = load_image(os.path.join(base_dir, img_path))
-        mask = load_image(os.path.join(base_dir, mask_path))
-        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-        
-        imgs.append(img)
-        masks.append(mask)
-        filepaths.append(os.path.basename(img_path))
+    checkpoints_path = 'check_points/unet'
+    model_path = f"{checkpoints_path}/model_state_dict_latest.pt"
+    output = f'{checkpoints_path}/model.onnx'
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = Unet().to(device)
+    model.load_state_dict(torch.load(model_path))
+    model = model.eval()
+    
+    dataset = ImageDataset(data_path, augmentation=False, preload= False)
+    loader = torch.utils.data.DataLoader(dataset, batch_size= BATCH_SIZE, shuffle=False)
+    
+    total = len(dataset)
+    logger.info('number of test dataset : {}'.format(total))
     
     start_time = time()
     pre_elap = 0.0
     fps = 0.0
     cost = .0
     loss = .0
-    for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
-        img = load_image(os.path.join(base_dir, img_path))
-        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-        
-        output = model(img)
-        output = output[0].reshape(img.shape)
-        
-        loss = dice_loss(output, mask)
-        
-        cost += loss
-        
-        logger.info('{}/{} - {},  fps: {:.1f}, dice loss: {:.1f}'.format(idx+1, total, filename, fps, (1-loss)))
+    
+    with torch.no_grad():
+        for idx, (filename, img, mask) in enumerate(loader):
+            img = img.to(device).type(torch.float32)
+            mask = mask.to(device).type(torch.float32)
+            filename = filename[0]
+            output = model(img)
+            loss = dice_loss(output, mask)
 
-        if(display):
-            display_image(img, output)
-        
-        elap = time() - start_time
-        fps = max(0.0, 1.0 / (elap - pre_elap))
-        pre_elap = elap
+            cost += loss.cpu().item()
+
+            logger.info('{}/{} - {},  fps: {:.1f}, dice loss: {:.1f}'.format(idx+1, total, filename, fps, (loss)))
+
+            if(display):
+                display_image(img, output)
+
+            elap = time() - start_time
+            fps = max(0.0, 1.0 / (elap - pre_elap))
+            pre_elap = elap
         
     if(display):
         cv2.destroyAllWindows()
@@ -147,7 +153,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='unet')
     
     parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/unet/model.engine')
-    parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/supervisely_person/test_data_list.txt')
+    parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/supervisely_person')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
     
     args = parser.parse_args()

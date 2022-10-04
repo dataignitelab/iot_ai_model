@@ -34,32 +34,44 @@ def load_data(root_path, name='images', trim=None):
 
 class ImageDataset(Dataset):
     
-    def __init__(self, dataset_dir):
-        path, images = load_data(dataset_dir, 'images') # , trim=1100
-        mask_path, masks = load_data(dataset_dir, 'masks')
-        self.images = images
-        self.masks = masks
-        self.path = path
-        self.mask_path = mask_path
+    def __init__(self, dataset_dir, augmentation = True, preload = True):
+        self.preload = preload
+        if preload:
+            path, images = load_data(dataset_dir, 'images') # , trim=1100
+            mask_path, masks = load_data(dataset_dir, 'masks')
+            self.images = images
+            self.masks = masks
+            self.path = path
+            self.mask_path = mask_path
+        else:
+            self.path = glob(os.path.join(dataset_dir, 'images', "*.png"))
+            self.mask_path = glob(os.path.join(dataset_dir, 'masks', "*.png"))
+            
+        self.augmentation = augmentation
 
     def __len__(self):
         return len(self.path)    
 
     def __getitem__(self, index):
-        img = torch.tensor(self.images[index])
-        mask = torch.tensor(self.masks[index])
+        if self.preload:
+            img = torch.tensor(self.images[index])
+            mask = torch.tensor(self.masks[index])
+        else:
+            img = load_image(self.path[index])
+            mask = load_image(self.mask_path[index])
 
-        if (np.random.random() > 0.5):
-            img = TF.hflip(img)
-            mask = TF.hflip(mask)
+        if self.augmentation:
+            if (np.random.random() > 0.5):
+                img = TF.hflip(img)
+                mask = TF.hflip(mask)
 
-        if (np.random.random() > 0.5):
-            img = TF.vflip(img)
-            mask = TF.vflip(mask)
+            if (np.random.random() > 0.5):
+                img = TF.vflip(img)
+                mask = TF.vflip(mask)
 
-        if np.random.random() > 0.5:
-            angle = np.random.randint(-30, 30)
-            img = TF.rotate(img, angle)
-            mask = TF.rotate(mask, angle)
+            if np.random.random() > 0.5:
+                angle = np.random.randint(-30, 30)
+                img = TF.rotate(img, angle)
+                mask = TF.rotate(mask, angle)
         
         return self.path[index], img, mask

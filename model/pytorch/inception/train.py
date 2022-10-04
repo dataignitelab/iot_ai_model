@@ -51,7 +51,7 @@ def fit(model, dataloader, criterion, optimizer, device, half = False):
         correct += output.eq(target).int().sum()
 
     acc = (correct/len(dataloader.dataset))
-    loss = loss/len(dataloader.dataset)
+    loss = loss/len(dataloader)
     logger.info("{}, duration:{:6.1f}s, acc:{:.4f}, loss:{:.4f}".format(('trn' if model.training else 'val'), 
                                                                          time()-start_time, 
                                                                          acc, 
