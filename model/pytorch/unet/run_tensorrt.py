@@ -40,6 +40,7 @@ def dice_loss(inputs, targets, smooth=1):
     return dice 
 
 def display_image(img, mask):
+    img = img[0]
     img = img * 255
     mask[mask > 0.5] = 255
     mask[mask <= 0.5] = 0
@@ -113,7 +114,7 @@ def inference(model_path, data_path, display = False):
         
         cost += loss
         
-        logger.info('{}/{} - {},  fps: {:.1f}'.format(idx+1, total, filename, fps))
+        logger.info('{}/{} - {},  fps: {:.1f}, dice loss: {:.1f}'.format(idx+1, total, filename, fps, (1-loss)))
 
         if(display):
             display_image(img, output)
