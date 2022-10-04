@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import base64
+# from matplotlib import pyplot as plt
 
 from model import Unet
 from dataset import load_image
@@ -41,6 +42,11 @@ def dice_loss(inputs, targets, smooth=1):
 
 def display_image(img, mask, local = False):
     img = img[0]
+    mask = mask[0]
+    
+    img = np.transpose(img, (1,2,0))
+    mask = np.transpose(mask, (1,2,0))
+    
     img = img * 255
     img = np.minimum(np.maximum(img, 255), 0)
     mask[mask > 0.5] = 255
@@ -57,6 +63,7 @@ def display_image(img, mask, local = False):
     other[:,:,[0,2]] = mask[:,:,[0,2]] 
     img[other >= 255] = img[other >= 255] * 0.3
     
+    # plt.imshow(img)
     cv2.imshow('img', img)
     cv2.waitKey(1)
 
