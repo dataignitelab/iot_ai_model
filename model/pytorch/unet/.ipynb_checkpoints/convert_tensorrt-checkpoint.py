@@ -6,8 +6,7 @@ def run():
                     "--onnx=check_points/unet/model.onnx",
                     "--saveEngine=check_points/unet/model.engine",
                     "--verbose",
-                    "--workspace=512",
-                    "--fp16"])
+                    "--workspace=512"])
 
 if __name__ == '__main__':
     run()

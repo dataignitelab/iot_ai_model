@@ -103,6 +103,13 @@ def inference(model_path, data_path, display = False):
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
         mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
         
+        # img = cv2.imread(path)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # img = cv2.resize(img, (256, 256))
+        # img = img.astype(np.float32) / 255.
+        # img = np.transpose(img, (2, 0, 1))
+        # img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        
         imgs.append(img)
         masks.append(mask)
         filepaths.append(os.path.basename(img_path))
