@@ -33,9 +33,9 @@
 ## 이미지 분할 모델 (Image Segmentation)
 
 #### 5. Caffe 기반 Unet
-  - 목적 : 디지털 배전판, 계기판 숫자 인식 (Text recongnition)
-  - 학습 데이터 : 서버실 디지털 온도계, 습도계, 시계
-    - https://www.kaggle.com/datasets/keshavaprasad/svhnvocyolodigitdetector?resource=download
+  - 목적 : 이미지 내의 사람 영역 인식
+  - 학습 데이터 : 다양한 크기와 자세인 사람(전신, 상반신) 이미지 (supervisely human)
+    - https://www.kaggle.com/datasets/tapakah68/supervisely-filtered-segmentation-person-dataset
   - 목표 성능치 : 13.5 fps
 
 ## 시계열 분류 모델
