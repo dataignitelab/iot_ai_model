@@ -40,7 +40,7 @@ def dice_loss(inputs, targets, smooth=1):
 
     return 1-dice 
 
-def display_image(img, mask, gui = False):
+def display_image(img, mask, gui = True):
     img = img[0]
     mask = mask[0]
     
@@ -116,8 +116,6 @@ def inference(model_path, data_path, display = False):
         imgs.append(img)
         masks.append(mask)
         filepaths.append(os.path.basename(img_path))
-        
-        break
     
     start_time = time()
     pre_elap = 0.0
