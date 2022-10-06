@@ -7,8 +7,6 @@ import os
 import cv2
 import numpy as np
 from PIL import Image
-import base64
-# from matplotlib import pyplot as plt
 
 from model import Unet
 from dataset import load_image
@@ -41,9 +39,10 @@ def dice_loss(inputs, targets, smooth=1):
     return 1-dice 
 
 def display_image(img, mask, gui = True):
-    img = img[0]
-    mask = mask[0]
-    
+    img = img.reshape(img.shape[1], img.shape[2], img.shape[3])
+    mask = mask.reshape(mask.shape[1], mask.shape[2], mask.shape[3])
+   
+    img = img.astype(np.float32)
     img = np.transpose(img, (1,2,0))
     mask = np.transpose(mask, (1,2,0))
     
@@ -53,17 +52,17 @@ def display_image(img, mask, gui = True):
     mask[mask <= 0.5] = 0
     
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    img = img.astype(np.int16)
+    #img = img.astype(np.uint8)
     green = np.zeros_like(mask)
     green[:,:,1] = mask[:,:,1]
-    img[green >= 255] = img[green >= 255] * 3
+    img[green >= 255] = img[green >= 255] * 2
     img[img >= 255] = 255
 
     other = np.zeros_like(mask)
     other[:,:,[0,2]] = mask[:,:,[0,2]] 
-    img[other >= 255] = img[other >= 255] * 0.3
+    img[other >= 255] = img[other >= 255] * 0.5
     
-    # plt.imshow(img)
+    img = img.astype(np.uint8)
     if gui :
         cv2.imshow('img', img)
         cv2.waitKey(1)
@@ -73,15 +72,11 @@ def display_image(img, mask, gui = True):
 def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
     batch_size = 1
-     # os.path.join("..","models","main.trt")
+    
     model = TrtModel(model_path)
     shape = model.engine.get_binding_shape(0)
     
-    # data_paths = glob(dataset_path)
-    
-    
     logger.info('dataset loading..')
-   
     with open(data_path, 'r') as f:
         line = f.readlines()
 
@@ -106,34 +101,23 @@ def inference(model_path, data_path, display = False):
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
         mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
         
-        # img = cv2.imread(path)
-        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # img = cv2.resize(img, (256, 256))
-        # img = img.astype(np.float32) / 255.
-        # img = np.transpose(img, (2, 0, 1))
-        # img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-        
         imgs.append(img)
         masks.append(mask)
         filepaths.append(os.path.basename(img_path))
-    
+
     start_time = time()
     pre_elap = 0.0
     fps = 0.0
     cost = .0
     loss = .0
     for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
-        # img = load_image(os.path.join(base_dir,'images',filename))
-        # img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
         output = model(img)
         output = output[0].reshape(mask.shape)
         
         loss = dice_loss(output, mask)
-        
         cost += loss
         
         logger.info('{}/{} - {},  fps: {:.1f}, dice coefficient: {:.1f}'.format(idx+1, total, filename, fps, (1-loss)))
-
         if(display):
             display_image(img, mask)
         
@@ -144,14 +128,10 @@ def inference(model_path, data_path, display = False):
     if(display):
         cv2.destroyAllWindows()
 
-    # preds = torch.tensor(preds)
-    # targets = torch.tensor(targets)
-    # # acc = (correct/len(dataset))
-    # f1_score = f1(preds, targets) 
     
     elap = time() - start_time
     fps = total / elap
-    logger.info('dice coefficient: {:.4f}, fps: {:.4f}'.format(cost/total, fps))
+    logger.info('dice coefficient: {:.4f}, fps: {:.4f}'.format(1 - (cost/total), fps))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='unet')
