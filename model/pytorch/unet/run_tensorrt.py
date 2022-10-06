@@ -103,8 +103,6 @@ def inference(model_path, data_path, display = False):
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
         mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
         
-        print(img)
-        break
         # img = cv2.imread(path)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         # img = cv2.resize(img, (256, 256))
@@ -124,8 +122,6 @@ def inference(model_path, data_path, display = False):
     for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
         # img = load_image(os.path.join(base_dir,'images',filename))
         # img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-        
-        
         output = model(img)
         output = output[0].reshape(mask.shape)
         
