@@ -175,7 +175,7 @@ def inference(model_path, data_path, display = False):
 
         cnt += 1
         
-        logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, fps: {}'.format(cnt, total, path[0], labels[output], labels[target], output == target, loss))
+        logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, fps: {:.1f}'.format(cnt, total, path[0], labels[output], labels[target], output == target, fps))
 
         if(display):
             img = cv2.imread(path[0])
