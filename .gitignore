@@ -5,6 +5,7 @@ ex_ai_sample/
 didimdol/
 checkpoints/
 check_points/
+venv/
 core.*
 *.zip
 *.h5
