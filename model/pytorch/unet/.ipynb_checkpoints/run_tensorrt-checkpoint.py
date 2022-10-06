@@ -40,7 +40,7 @@ def dice_loss(inputs, targets, smooth=1):
 
     return 1-dice 
 
-def display_image(img, mask, local = False):
+def display_image(img, mask, gui = False):
     img = img[0]
     mask = mask[0]
     
@@ -52,7 +52,7 @@ def display_image(img, mask, local = False):
     mask[mask > 0.5] = 255
     mask[mask <= 0.5] = 0
     
-    # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     img = img.astype(np.int16)
     green = np.zeros_like(mask)
     green[:,:,1] = mask[:,:,1]
@@ -64,8 +64,11 @@ def display_image(img, mask, local = False):
     img[other >= 255] = img[other >= 255] * 0.3
     
     # plt.imshow(img)
-    cv2.imshow('img', img)
-    cv2.waitKey(1)
+    if gui :
+        cv2.imshow('img', img)
+        cv2.waitKey(1)
+    else:
+        cv2.imwrite('unet.jpg', img)
 
 def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
@@ -103,8 +106,6 @@ def inference(model_path, data_path, display = False):
         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
         mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
         
-        print(img)
-        break
         # img = cv2.imread(path)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         # img = cv2.resize(img, (256, 256))
@@ -115,6 +116,8 @@ def inference(model_path, data_path, display = False):
         imgs.append(img)
         masks.append(mask)
         filepaths.append(os.path.basename(img_path))
+        
+        break
     
     start_time = time()
     pre_elap = 0.0
@@ -124,8 +127,6 @@ def inference(model_path, data_path, display = False):
     for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
         # img = load_image(os.path.join(base_dir,'images',filename))
         # img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-        
-        
         output = model(img)
         output = output[0].reshape(mask.shape)
         
@@ -133,7 +134,7 @@ def inference(model_path, data_path, display = False):
         
         cost += loss
         
-        logger.info('{}/{} - {},  fps: {:.1f}, dice loss: {:.1f}'.format(idx+1, total, filename, fps, (loss)))
+        logger.info('{}/{} - {},  fps: {:.1f}, dice coefficient: {:.1f}'.format(idx+1, total, filename, fps, (1-loss)))
 
         if(display):
             display_image(img, mask)
