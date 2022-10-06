@@ -1,5 +1,5 @@
 import os
-from PIL import Image
+from PIL import Image, ImageEnhance
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -97,7 +97,7 @@ class ImageVisualizer(object):
         plt.savefig(save_path, bbox_inches="tight", pad_inches=0.0)
         plt.close('all')
     
-    def display_image(self, img, boxes, labels, name):
+    def display_image(self, img, boxes, labels, name = 'img', wait=1):
         image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
         for i, box in enumerate(boxes):
             idx = labels[i] - 1
@@ -110,8 +110,9 @@ class ImageVisualizer(object):
             cv2.rectangle(image, (box[0], box[1]), (box[2], box[3]), color, 1)
             cv2.rectangle(image, (box[0], box[1]-10), (box[0]+10,box[1]), color, -1)
             cv2.putText(image, '{}'.format(cls_name), (box[0], box[1]-1), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1)
-            cv2.imshow('img', image)
-            cv2.waitKey(1)
+        cv2.imshow(name, image)
+        if wait > -1:
+            cv2.waitKey(wait)
 
         
 def generate_patch(boxes, threshold):
@@ -176,6 +177,19 @@ def random_resize(img, boxes):
     new_w, new_h = img.size
     boxes = (boxes * [w, h, w, h] + [pixel_x, pixel_y, pixel_x, pixel_y]) / [new_w, new_h, new_w, new_h]    
     return img, boxes
+
+def random_brightness(img, factor = (0.2, 1.8)):
+    enhancer = ImageEnhance.Brightness(img)
+
+    if np.random.random() > 0.5:
+        factor = np.random.uniform(factor[0], 0.5)
+    
+    else:
+        factor = np.random.uniform(factor[0], 1.5)
+
+    img = enhancer.enhance(factor)
+
+    return img
 
 def random_translate(img, boxes):
     w, h = img.size
