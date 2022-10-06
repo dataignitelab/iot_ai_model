@@ -41,9 +41,10 @@ def dice_loss(inputs, targets, smooth=1):
     return 1-dice 
 
 def display_image(img, mask, gui = True):
-    img = img[0]
-    mask = mask[0]
-    
+    img = img.reshape(img.shape[1], img.shape[2], img.shape[3])
+    mask = mask.reshape(mask.shape[1], mask.shape[2], mask.shape[3])
+   
+    img = img.astype(np.float32)
     img = np.transpose(img, (1,2,0))
     mask = np.transpose(mask, (1,2,0))
     
@@ -53,17 +54,17 @@ def display_image(img, mask, gui = True):
     mask[mask <= 0.5] = 0
     
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    img = img.astype(np.int16)
+    #img = img.astype(np.uint8)
     green = np.zeros_like(mask)
     green[:,:,1] = mask[:,:,1]
-    img[green >= 255] = img[green >= 255] * 3
+    img[green >= 255] = img[green >= 255] * 2
     img[img >= 255] = 255
 
     other = np.zeros_like(mask)
     other[:,:,[0,2]] = mask[:,:,[0,2]] 
-    img[other >= 255] = img[other >= 255] * 0.3
+    img[other >= 255] = img[other >= 255] * 0.5
     
-    # plt.imshow(img)
+    img = img.astype(np.uint8)
     if gui :
         cv2.imshow('img', img)
         cv2.waitKey(1)
@@ -98,6 +99,8 @@ def inference(model_path, data_path, display = False):
     masks = []
     filepaths = []
     
+
+    c = 0
     for row in tqdm(line):
         img_path, mask_path = row.rstrip().split(',')
         
@@ -116,7 +119,9 @@ def inference(model_path, data_path, display = False):
         imgs.append(img)
         masks.append(mask)
         filepaths.append(os.path.basename(img_path))
-    
+        c += 1
+        #if c > 20: break
+
     start_time = time()
     pre_elap = 0.0
     fps = 0.0
@@ -136,6 +141,14 @@ def inference(model_path, data_path, display = False):
 
         if(display):
             display_image(img, mask)
+            #o = cv2.imread(os.path.join(base_dir, 'images', filename))
+            #o = cv2.cvtColor(o, cv2.COLOR_BGR2RGB)
+            #o = cv2.resize(o, (256,256))
+            #o = o.astype(np.uint8)# / 255. 
+            #o = o * 255.
+            #cv2.imshow('1',o)
+            #o = o * 255.
+            #cv2.waitKey(1)
         
         elap = time() - start_time
         fps = max(0.0, 1.0 / (elap - pre_elap))

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+trtexec --onnx=/home/workspace/iot_ai_model/check_points/inception/inceptionv4.onnx --saveEngine=/home/workspace/iot_ai_model/check_points/inception/model.engine --verbose --best
