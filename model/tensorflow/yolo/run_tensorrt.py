@@ -94,32 +94,22 @@ def inference(model_path, data_path, display = False, save = False):
         lines = anno.readlines()
     
     dir_path = os.path.dirname(data_path)
-    d = []
-    f = []
-    o = []
-    for row in tqdm(lines):
-        col = row.split()
-        filename = os.path.join(dir_path, col[0])
-        
-        # org_img = Image.open(filename)
-        # w,h = org_img.size
-        # img = np.array(org_img.resize((INPUT_SIZE, INPUT_SIZE)), dtype= np.float)
-        
-        org_img = cv2.imread(filename)
-        org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
-        img = img.astype(np.float32) / 255.
-        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-        d.append(img)
-        o.append(org_img)
-        f.append(filename)
         
     total = len(lines)
     start_time = time()
     pre_elap = 0.0
     fps = 0.0
         
-    for img,filename,org_img in zip(d,f,o):
+    for row in lines:
+        col = row.split()
+        filename = os.path.join(dir_path, col[0])
+        
+        org_img = cv2.imread(filename)
+        org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
+        img = img.astype(np.float32) / 255.
+        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        
         h,w,_ = org_img.shape
         
         preds = model(img)

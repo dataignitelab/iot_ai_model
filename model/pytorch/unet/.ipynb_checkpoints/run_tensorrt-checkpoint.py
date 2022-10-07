@@ -93,24 +93,33 @@ def inference(model_path, data_path, display = False):
     masks = []
     filepaths = []
     
-    for row in tqdm(line):
-        img_path, mask_path = row.rstrip().split(',')
+#     for row in tqdm(line):
+#         img_path, mask_path = row.rstrip().split(',')
         
-        img = load_image(os.path.join(base_dir, img_path))
-        mask = load_image(os.path.join(base_dir, mask_path))
-        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
-        mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
+#         img = load_image(os.path.join(base_dir, img_path))
+#         mask = load_image(os.path.join(base_dir, mask_path))
+#         img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+#         mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
         
-        imgs.append(img)
-        masks.append(mask)
-        filepaths.append(os.path.basename(img_path))
+#         imgs.append(img)
+#         masks.append(mask)
+#         filepaths.append(os.path.basename(img_path))
 
     start_time = time()
     pre_elap = 0.0
     fps = 0.0
     cost = .0
     loss = .0
-    for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
+    # for idx, (filename, img, mask) in enumerate(zip(filepaths, imgs, masks)):
+        
+    for idx, row in enumerate(line):
+        filename, mask_path = row.rstrip().split(',')
+        
+        img = load_image(os.path.join(base_dir, filename))
+        mask = load_image(os.path.join(base_dir, mask_path))
+        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        mask = mask.reshape(1, mask.shape[0], mask.shape[1], mask.shape[2])
+        
         output = model(img)
         output = output[0].reshape(mask.shape)
         

@@ -10,7 +10,6 @@ import argparse
 import pycuda.driver as cuda
 import pycuda.autoinit
 
-
 import torch
 from torchvision import transforms 
 from torchmetrics import F1Score
@@ -23,12 +22,9 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-
 import os
 import numpy as np
-# import tensorflow as tf
 from PIL import Image
-# from model.tensorflow.yolo.config import cfg
 
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']
 
@@ -130,7 +126,6 @@ class TrtModel:
         self.context = self.engine.create_execution_context()
 
                 
-                
     @staticmethod
     def load_engine(trt_runtime, engine_path):
         trt.init_libnvinfer_plugins(None, "")
@@ -139,6 +134,7 @@ class TrtModel:
             engine_data = f.read()
         engine = trt_runtime.deserialize_cuda_engine(engine_data)
         return engine
+
     
     def allocate_buffers(self):
         
@@ -174,7 +170,6 @@ class TrtModel:
         self.context.execute_async(batch_size=batch_size, bindings=self.bindings, stream_handle=self.stream.handle)
         for out in self.outputs:
             cuda.memcpy_dtoh_async(out.host, out.device, self.stream) 
-            
         
         self.stream.synchronize()
         return [out.host.reshape(batch_size,-1) for out in self.outputs]
@@ -184,15 +179,9 @@ def inference(model_path, data_path, display = False):
     logger.info('model loading.. {}'.format(model_path))
     labels = ["defect", "normal"]
     batch_size = 1
-     # os.path.join("..","models","main.trt")
     model = TrtModel(model_path)
     shape = model.engine.get_binding_shape(0)
     
-    # data_paths = glob(dataset_path)
-    
-    
-    logger.info('dataset loading..')
-    # gen, total = create_batch_generator(data_path)
     gen = Dataset(data_path)
     total = len(gen)
     
@@ -239,12 +228,8 @@ def inference(model_path, data_path, display = False):
     elap = time() - start_time
     fps = total / elap
     
-    if(display):
-        cv2.destroyAllWindows()
-
     preds = torch.tensor(preds)
     targets = torch.tensor(targets)
-    # acc = (correct/len(dataset))
     f1_score = f1(preds, targets) 
     
     logger.info('f1-score : {:.4f}, fps : {:.4f}'.format(float(f1_score), fps))

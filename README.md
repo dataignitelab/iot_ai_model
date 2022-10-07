@@ -1,6 +1,7 @@
 # IoT AI model project
   - IIoT 데이터를 활용한 AI 모델 개발 프로젝트 입니다.
   - Target Device : Nivida jetson TX2 (4GB)
+  - 학습머신에서는 Pytorch, Tensorflow로 모델 개발 및 학습하고 ONNX로 전환하며, 최종적으로 Jetson TX2에서 ONNX를 TensorRT 모델로 전환하여 사용합니다.
  
 ## 이미지 분류 모델
 
