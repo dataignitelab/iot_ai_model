@@ -31,7 +31,7 @@ if __name__ == '__main__':
     model.half()
     model.eval()
 
-    path = 'dataset/current/test/**/*.csv'
+    path = 'dataset/current/test_500/**/*.csv'
     dataset = CurrentDataset(path)
     total = len(dataset)
     dataloader = DataLoader(dataset,

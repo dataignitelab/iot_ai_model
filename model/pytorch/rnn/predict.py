@@ -30,7 +30,7 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
-    path = 'dataset/vibration/test/**/*.csv'
+    path = 'dataset/vibration/test_500/**/*.csv'
     dataset = VibrationDataset(path)
     total = len(dataset)
     dataloader = DataLoader(dataset,
