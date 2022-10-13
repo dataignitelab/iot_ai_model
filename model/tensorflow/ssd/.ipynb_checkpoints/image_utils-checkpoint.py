@@ -110,7 +110,7 @@ class ImageVisualizer(object):
             cv2.rectangle(image, (box[0], box[1]), (box[2], box[3]), color, 1)
             cv2.rectangle(image, (box[0], box[1]-10), (box[0]+10,box[1]), color, -1)
             cv2.putText(image, '{}'.format(cls_name), (box[0], box[1]-1), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1)
-        cv2.imshow(name, image)
+        cv2.imshow('image', image)
         if wait > -1:
             cv2.waitKey(wait)
 
