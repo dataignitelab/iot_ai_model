@@ -193,3 +193,7 @@ def create_ssd(num_classes, arch, pretrained_type,
             
     return net
 
+
+if __name__ == '__main__':
+    model = create_ssd(num_classes=11, arch='ssd300', pretrained_type=None, checkpoint_path='check_points/ssd/ssd_epoch_latest.h5')
+    model.summary()

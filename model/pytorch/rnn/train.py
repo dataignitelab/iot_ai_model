@@ -253,7 +253,7 @@ if __name__ == "__main__" :
                             pin_memory=True,
                             drop_last=False)
 
-        # 모델 학습습 로깅깅 설정
+    # 모델 학습 로깅 설정
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
