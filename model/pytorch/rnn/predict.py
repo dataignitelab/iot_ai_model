@@ -68,14 +68,15 @@ if __name__ == '__main__':
             preds = torch.cat([preds, out])
             targets = torch.cat([targets, y])  
             
-            logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, loss : {:.4f}'.format(cnt, total, file_path[0], labels[out[0]], labels[y[0]], out[0] == y[0], loss))
+            logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}'.format(cnt, total, file_path[0], labels[out[0]], labels[y[0]], out[0] == y[0]))
     
     f1 = f1socre(preds.to('cpu'), targets.to('cpu'))
     avg_cost = avg_cost / total
     
-    logger.info('time : {:.2f}, loss : {:.4f}, f1-score : {:.4f}'.format(
+    tps = total / (time.time()-start_time)  
+    logger.info('time : {:.2f}, tps : {:.1f}, f1-score : {:.4f}'.format(
             time.time()-start_time,
-            avg_cost,
+            tps,
             f1
         )
     )
