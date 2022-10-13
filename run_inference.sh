@@ -37,7 +37,7 @@ elif [ "$1" = "augmentation" ]; then
         echo "[err] unknown option. please input --num=[NUMER]"
         exit 0
     fi
-    python3 ./model/pytorch/ssd/test_augmentation.py ${v_num_option}
+    python3 ./model/tensorflow/ssd/test_augmentation.py ${v_num_option}
 else
     echo "[err] unknown process name."
     echo $v_label_model
