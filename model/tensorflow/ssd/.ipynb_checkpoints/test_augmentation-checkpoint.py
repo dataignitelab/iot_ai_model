@@ -3,6 +3,7 @@ from dataset import VOCDataset
 import image_utils as util 
 import numpy as np
 import cv2
+import argparse
 
 def get_coord(image, boxes):
     h,w = image.size
@@ -10,6 +11,14 @@ def get_coord(image, boxes):
     return new_boxes
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='augmentation')
+    parser.add_argument('--num', default=5, type=int)
+    args = parser.parse_args()
+    
+    count = args.num
+    
+    print(f'Testing number of images : {count}')
+    
     LABEL_NAME = ['0','1','2','3','4','5','6','7','8','9']
 
     visualizer = ImageVisualizer(LABEL_NAME, save_dir='check_points/yolo/outputs/images')
@@ -51,7 +60,6 @@ if __name__ == '__main__':
 
         cv2.waitKey(0)
 
-        if idx > 5: break
-
+        if idx > (count-1): break
 
     cv2.destroyAllWindows()  
