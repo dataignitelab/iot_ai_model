@@ -52,7 +52,7 @@ if __name__ == '__main__':
     cnt = 0
     start_time = time.time()
     
-    logger.info('loaded {device}')
+    logger.info(f'loaded {device}')
     with torch.no_grad():
         # progress = tqdm(dataloader)
         for samples in dataloader:
