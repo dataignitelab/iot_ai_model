@@ -13,6 +13,8 @@ if [ "$2" = "--display" ]; then
     v_display="true"
 fi
 
+echo $1 $2
+
 if [ "$1" = "inception" ]; then
     python3 ./model/pytorch/inception/run_tensorrt.py --display ${v_display}
 elif [ "$1" = "yolo" ]; then
@@ -31,13 +33,13 @@ elif [ "$1" = "augmentation" ]; then
     v_num_option=""
     if [ -z "$2" ]; then
         v_num_option="--num=5"
-    elif [ "$2" = "--num="* ]; then
+    elif [[ "$2" == --num=* ]]; then
         v_num_option=$2
     else
-        echo "[err] unknown option. please input --num=[NUMER]"
+        echo "[err] unknown option. please input --num=[NUMBER]"
         exit 0
     fi
-    python3 ./model/pytorch/ssd/test_augmentation.py ${v_num_option}
+    python3 ./model/tensorflow/ssd/test_augmentation.py ${v_num_option}
 else
     echo "[err] unknown process name."
     echo $v_label_model
