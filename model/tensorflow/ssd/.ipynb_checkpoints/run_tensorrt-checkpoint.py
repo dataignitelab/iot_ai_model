@@ -25,10 +25,7 @@ from time import time
 
 from anchor import generate_default_boxes
 from box_utils_numpy import decode, compute_nms
-from dataset import VOCDataset
 from image_utils import ImageVisualizer
-from losses import create_losses
-from network import create_ssd
 from evaluate import evaluate
 from PIL import Image
 
@@ -162,9 +159,6 @@ def inference(model_path, data_path, display = False, save = False):
     
     use_tensor = False
     default_boxes = generate_default_boxes(config, use_tensor = use_tensor)
-    
-    # voc = VOCDataset(data_path, default_boxes,
-    #                  config['image_size'], -1, augmentation = False, use_tensor = use_tensor)
     
     visualizer = ImageVisualizer(labels, save_dir='check_points/ssd/outputs/images')
     

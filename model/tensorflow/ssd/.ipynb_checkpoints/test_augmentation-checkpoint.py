@@ -60,6 +60,6 @@ if __name__ == '__main__':
 
         cv2.waitKey(0)
 
-        if idx > (count-1): break
+        if idx >= (count-1): break
 
     cv2.destroyAllWindows()  

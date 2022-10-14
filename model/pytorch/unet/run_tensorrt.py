@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from model import Unet
 from dataset import load_image
 from tensorrt_model import TrtModel
 
