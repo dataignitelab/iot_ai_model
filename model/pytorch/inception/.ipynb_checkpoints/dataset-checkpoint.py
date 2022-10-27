@@ -21,10 +21,6 @@ class ImageDataset(Dataset):
 
         _, self.file_path, self.labels = self._getfile_list(dataset_path)
 
-        # s = set(self.labels)
-        # for index, key in enumerate(s):
-        #     self.labels_map[key] = index
-
         self.label_idx = [ float(self.label_map[label]) for label in self.labels ]
 
     def __len__(self):

@@ -18,20 +18,25 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--model_path', dest='model_path', type=str, default='check_points/inception/model_state_dict_best.pt')
+    parser.add_argument('--data_path', dest='data_path', type=str, default='dataset/casting_data/test')
+    args = parser.parse_args()
+    
+    
     logger.info('model loading..')
     num_classes = 1
     usb_tensorrt = False
-    model_path = "check_points/inception/model_state_dict_12_best.pt"
-    data_path = "dataset/casting_data/test"
+    model_path = args.model_path
+    data_path = args.data_path
     labels = ["normal", "defect"]
     
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = inceptionv4(num_classes = num_classes).to(device)
     model.load_state_dict(torch.load(model_path))
     model.eval()
     
-
     logger.info('dataset loading..')
     tranform = transforms.Compose([
         transforms.ToPILImage(),
@@ -50,7 +55,6 @@ if __name__ == '__main__':
     preds = []
     targets = []
     logger.info('inferencing images..')
-    # progress = tqdm(dataloader)
     total = len(dataset)
     cnt = 0
     with torch.no_grad():
@@ -70,13 +74,6 @@ if __name__ == '__main__':
             fps = cnt / elap
 
             logger.info('{}/{} - {}, Predicted : {}, Actual : {}, Correct : {}, loss : {}'.format(cnt, total, path[0], labels[output], labels[target], output == target, loss))
-
-#         img = cv2.imread(path[0])
-        
-#         cv2.putText(img, 'Result: {}, Correct: {} '.format(labels[output], output == target), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1.5)
-#         cv2.putText(img, 'FPS: {:.2f}'.format(fps), (5, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 1.5)
-#         cv2.imshow('img', img)
-#         cv2.waitKey(1)
 
     cv2.destroyAllWindows()
 

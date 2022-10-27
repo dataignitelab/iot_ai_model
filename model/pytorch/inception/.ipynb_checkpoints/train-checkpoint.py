@@ -21,7 +21,17 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-checkpoints_path = './didimdol/checkpoints/inception'
+checkpoints_path = './check_points/inception'
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('true', '1'):
+        return True
+    elif v.lower() in ('false', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def fit(model, dataloader, criterion, optimizer, device, half = False):
     loss = .0
@@ -30,7 +40,7 @@ def fit(model, dataloader, criterion, optimizer, device, half = False):
     start_time = time()
     
     progress = tqdm(dataloader)
-    for data, target in progress:
+    for path, data, target in progress:
         data = data.to(device)
         if half :
             data = data.half()
@@ -61,19 +71,25 @@ def fit(model, dataloader, criterion, optimizer, device, half = False):
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='train..')
     parser.add_argument('--dataset', dest='dataset', type=str, default='dataset/casting_data/train')
-
+    parser.add_argument('--lr', dest='lr', type=float, default=0.001)
+    parser.add_argument('--epochs', dest='epochs', type=int, default=20)
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=64)
+    parser.add_argument('--cpus', dest='cpus', default=-1, type=int)
+    parser.add_argument('--use_cpu', dest='use_cpu', type=str2bool, default=False)
+    parser.add_argument('--check_points', dest='check_points', type=str, default='check_points/inception')
+    
     args = parser.parse_args()
 
     # training args 
-    lr = 0.01
-    batch_size = 128
+    lr = args.lr
+    batch_size = args.batch_size
     worker = 3
     num_classes = 1
-    epochs = 20
+    epochs = args.epochs
     early_stopping = 5
+    checkpoints_path = args.check_points
+    dataset_path = args.data_path    
     labels = ["normal", "defect"]
-
-    dataset_path = args.dataset
 
     # datset
     dataset = ImageDataset(dataset_path, labels)
@@ -149,9 +165,9 @@ if __name__ == "__main__" :
                 early_count = 0
 
             if len(val_acc) > 0 and max(val_acc) < acc:
-                torch.save(model.state_dict(), f"{checkpoints_path}/model_state_dict_{epoch}_best.pt")
+                torch.save(model.state_dict(), f"{checkpoints_path}/model_state_dict_best.pt")
 
             val_loss.append(loss)
             val_acc.append(acc)
             
-    torch.save(model.state_dict(), f"{checkpoints_path}/model_state_dict_{epoch}.pt")
+    torch.save(model.state_dict(), f"{checkpoints_path}/model_state_dict_latest.pt")
