@@ -1,4 +1,5 @@
 import tensorflow as tf
+import argparse
 
 # from model import resnet50
 from model import resnet_50
@@ -16,10 +17,15 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='train..')
+    parser.add_argument('--data_path', dest='data_path', type=str, default='dataset/casting_data/test')
+    parser.add_argument('--model_path', dest='model_path', type=str, default='check_points/resnet50/model_lite.h5')
+    args = parser.parse_args()
+    
     labels = ['defect', 'normal']
     
     model = resnet_50(num_classes=1)
-    model.load_weights(filepath='check_points/resnet50/lite/')
+    model.load_weights(filepath=args.model_path)
     # model = tf.keras.models.load_model('check_points/resnet50/model.h5')
     
     

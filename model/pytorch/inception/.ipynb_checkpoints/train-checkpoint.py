@@ -21,8 +21,6 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-checkpoints_path = './check_points/inception'
-
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -70,14 +68,13 @@ def fit(model, dataloader, criterion, optimizer, device, half = False):
 
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description='train..')
-    parser.add_argument('--dataset', dest='dataset', type=str, default='dataset/casting_data/train')
+    parser.add_argument('--data_path', dest='data_path', type=str, default='dataset/casting_data/train')
     parser.add_argument('--lr', dest='lr', type=float, default=0.001)
     parser.add_argument('--epochs', dest='epochs', type=int, default=20)
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=64)
     parser.add_argument('--cpus', dest='cpus', default=-1, type=int)
     parser.add_argument('--use_cpu', dest='use_cpu', type=str2bool, default=False)
-    parser.add_argument('--check_points', dest='check_points', type=str, default='check_points/inception')
-    
+    parser.add_argument('--checkpoints_path', dest='checkpoints_path', type=str, default='check_points/inception')
     args = parser.parse_args()
 
     # training args 
@@ -87,7 +84,7 @@ if __name__ == "__main__" :
     num_classes = 1
     epochs = args.epochs
     early_stopping = 5
-    checkpoints_path = args.check_points
+    checkpoints_path = args.checkpoints_path
     dataset_path = args.data_path    
     labels = ["normal", "defect"]
 

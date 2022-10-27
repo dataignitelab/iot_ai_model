@@ -1,16 +1,40 @@
+import argparse
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import preprocessing
+import os
 
 from model import resnet_50
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('true', '1'):
+        return True
+    elif v.lower() in ('false', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 if __name__ == '__main__':
-    trn_data_dir = 'dataset/casting_data/train'
-    val_data_dir = 'dataset/casting_data/test'
-    batch_size = 64
+    parser = argparse.ArgumentParser(description='train..')
+    parser.add_argument('--data_path', dest='data_path', type=str, default='dataset/casting_data')
+    parser.add_argument('--lr', dest='lr', type=float, default=0.001)
+    parser.add_argument('--epochs', dest='epochs', type=int, default=20)
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=64)
+    parser.add_argument('--cpus', dest='cpus', default=-1, type=int)
+    parser.add_argument('--use_cpu', dest='use_cpu', type=str2bool, default=False)
+    parser.add_argument('--checkpoints_path', dest='checkpoints_path', type=str, default='check_points/resnet')
+    args = parser.parse_args()
+    
+    
+    checkpoints_path = args.checkpoints_path
+    trn_data_dir = os.path.join(args.data_path, 'train')
+    val_data_dir = os.path.join(args.data_path, 'test')
+    batch_size = args.batch_size
     img_height = 224
     img_width = 224
-    epochs = 20
+    epochs = args.epochs
     
     model = resnet_50(num_classes=1)
     model.build(input_shape=(None, img_height, img_width, 3))
@@ -114,6 +138,8 @@ if __name__ == '__main__':
         
         if (best_loss > valid_loss.result()):
             best_loss = valid_loss.result()
-            model.save_weights('check_points/resnet50/model_lite.h5')
+            model.save_weights(os.path.join(checkpoints_path, 'model_best.h5'))
             print('best loss! model saved.')
+        
+    model.save_weights(os.path.join(checkpoints_path, 'model_latest.h5'))
    
