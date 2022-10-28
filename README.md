@@ -2,6 +2,7 @@
   - IIoT 데이터를 활용한 AI 모델 개발 프로젝트 입니다.
   - Target Device : Nivida jetson TX2 (4GB)
   - 학습머신에서는 Pytorch, Tensorflow로 모델 개발 및 학습하고 ONNX로 전환하며, 최종적으로 Jetson TX2에서 ONNX를 TensorRT 모델로 전환하여 사용합니다.
+  - 공개된 학습데이터셋을 활용하며, 본 프로젝트 코드에는 데이터셋은 포함되어 있지 않습니다. (아래 링크를 따라 별도로 다운로드)
  
 ## 이미지 분류 모델
 
@@ -33,7 +34,7 @@
 
 ## 이미지 분할 모델 (Image Segmentation)
 
-#### 5. Caffe 기반 Unet
+#### 5. Unet
   - 목적 : 이미지 내의 사람 영역 인식
   - 학습 데이터 : 다양한 크기와 자세인 사람(전신, 상반신) 이미지 (supervisely human)
     - https://www.kaggle.com/datasets/tapakah68/supervisely-filtered-segmentation-person-dataset
