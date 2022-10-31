@@ -7,37 +7,12 @@ import yaml
 from tqdm import tqdm
 
 from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay
-from voc_data import create_batch_generator
+from dataset import create_batch_generator
 from anchor import generate_default_boxes
 from network import create_ssd
 from losses import create_losses
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--anno-path', default='dataset/server_room/test_digit.txt')
-parser.add_argument('--data-year', default='2007')
-parser.add_argument('--arch', default='ssd300')
-parser.add_argument('--batch-size', default=64, type=int)
-parser.add_argument('--num-batches', default=-1, type=int)
-parser.add_argument('--neg-ratio', default=3, type=int)
-parser.add_argument('--initial-lr', default=1e-3, type=float)
-parser.add_argument('--momentum', default=0.9, type=float)
-parser.add_argument('--weight-decay', default=5e-4, type=float)
-parser.add_argument('--num-epochs', default=100, type=int)
-parser.add_argument('--checkpoint-dir', default='./check_points/ssd')
-parser.add_argument('--checkpoint-path', default='check_points/ssd/ssd_epoch_latest.h5') # latest
-parser.add_argument('--pretrained-type', default='base')
-parser.add_argument('--gpu-id', default='0')
-
-args = parser.parse_args()
-
-os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
-
 NUM_CLASSES = 11
-
 
 @tf.function
 def train_step(imgs, gt_confs, gt_locs, ssd, criterion, optimizer):
@@ -59,6 +34,30 @@ def train_step(imgs, gt_confs, gt_locs, ssd, criterion, optimizer):
 
 
 if __name__ == '__main__':
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--anno-path', default='dataset/server_room/train_digit.txt')
+    parser.add_argument('--data-year', default='2007')
+    parser.add_argument('--arch', default='ssd300')
+    parser.add_argument('--batch-size', default=64, type=int)
+    parser.add_argument('--num-batches', default=-1, type=int)
+    parser.add_argument('--neg-ratio', default=3, type=int)
+    parser.add_argument('--initial-lr', default=1e-3, type=float)
+    parser.add_argument('--momentum', default=0.9, type=float)
+    parser.add_argument('--weight-decay', default=5e-4, type=float)
+    parser.add_argument('--num-epochs', default=100, type=int)
+    parser.add_argument('--checkpoint-dir', default='./check_points/ssd')
+    parser.add_argument('--checkpoint-path', default='check_points/ssd/ssd_epoch_latest.h5') # latest
+    parser.add_argument('--pretrained-type', default='base')
+    parser.add_argument('--gpu-id', default='0')
+
+    args = parser.parse_args()
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
+
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
     with open('model/tensorflow/ssd/config.yml') as f:
