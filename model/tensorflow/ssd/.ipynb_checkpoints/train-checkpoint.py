@@ -35,8 +35,9 @@ def train_step(imgs, gt_confs, gt_locs, ssd, criterion, optimizer):
 
 if __name__ == '__main__':
     gpus = tf.config.experimental.list_physical_devices('GPU')
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
+    
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--anno-path', default='dataset/server_room/train_digit.txt')
