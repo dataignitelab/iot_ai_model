@@ -1,32 +1,35 @@
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-import time
+from time import time
 from tqdm import tqdm
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import cv2
 import logging
 import os
+import argparse
+import logging
 
-from yolo import createModel, decode, compute_loss, decode_train
+from yolo import createModel, decode_tf
 from dataset import Dataset
+from image_utils import ImageVisualizer
+from box_utils_numpy import compute_nms
+from eval import evaluate
 
 plt.rcParams["figure.figsize"] = (20,10)
 
-check_point_path = 'check_points/yolo'
-
-INPUT_SIZE = 416
-NUM_CLASS = 10
-EPOCHS = 100
-BATCH_SIZE = 64
-IOU_LOSS_THRESH = 0.3
-
 CLASSES = ['0','1','2','3','4','5','6','7','8','9']
+IOU_LOSS_THRESH = 0.3
+INPUT_SIZE = 416
+NUM_CLASS = len(CLASSES)
+BATCH_SIZE = 1
+    
 ANCHORS        = [23,27, 37,58, 81,82, 81,82, 135,169, 344,319]
 STRIDES       =  [16, 32]
 XYSCALE       = [1.05, 1.05]
 ANCHOR_PER_SCALE     = 3
+
 
 palette = [(255, 56, 56),
     (255, 157, 151),
@@ -50,144 +53,167 @@ palette = [(255, 56, 56),
     (255, 55, 199)]
 
 
-def infer(model, image_path, IOU_THRESHOLD = 0.4, INPUT_SIZE= 416):
-    o_image = cv2.imread(image_path)
-    o_image = cv2.cvtColor(o_image, cv2.COLOR_BGR2RGB)
-    image = cv2.resize(o_image, (INPUT_SIZE, INPUT_SIZE))
-    image = image / 255.
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('true', '1'):
+        return True
+    elif v.lower() in ('false', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def inference(model_path, data_path, logging_dir, display = False, save = False):
+    logger.info('model loading.. {}'.format(model_path))
+
+    model = createModel(NUM_CLASS, INPUT_SIZE, STRIDES, ANCHORS, XYSCALE)
+    model.load_weights(model_path)
     
-
-    images_data = []
-    pred_bbox = []
-    for i in range(1):
-        images_data.append(image)
-    images_data = np.asarray(images_data).astype(np.float32)
-    batch_data = tf.constant(images_data)
+    visualizer = ImageVisualizer(CLASSES, save_dir=os.path.join(logging_dir, 'outputs', 'images'))
     
-    preds = model(batch_data, training=False)
-
-    box_list = []
-    conf_list = []
-    for idx, output in enumerate(preds):
-        if idx % 2 == 0 : continue
-        boxes = output[:, :, :, :,  0:4]
-        pred_conf = output[:, :, :, :, 4:]
-
-        bs, xi, yi, anc, xywh = boxes.shape
-        box_list.append(tf.reshape(boxes, (bs, -1, 1, xywh)))
-        bs, xi, yi, anc, conf = pred_conf.shape
-        conf_list.append(tf.reshape(pred_conf, (bs, -1, conf)))
-
-    boxes = tf.concat([box_list[0], box_list[1]], 1).numpy()
-    pred_conf =  tf.concat([conf_list[0], conf_list[1]], 1).numpy()
-
-    classes_prob =  pred_conf[:, :, 1:] * pred_conf[:, :, :1]
-
-    boxes[:,:,:,0] = boxes[:,:,:,0] - (boxes[:,:,:, 2] / 2) # x1
-    boxes[:,:,:,1] = boxes[:,:,:,1] - (boxes[:,:,:, 3] / 2) # y1
-
-    boxes[:,:,:,2] = boxes[:,:,:,0] + boxes[:,:,:, 2] # x2
-    boxes[:,:,:,3] = boxes[:,:,:,1] + boxes[:,:,:, 3] # y2
-
-    o_boxes, scores, classes, detections = tf.image.combined_non_max_suppression(
-        boxes=boxes,
-        scores=classes_prob,
-        max_output_size_per_class= 20,
-        max_total_size=30,
-        iou_threshold=IOU_THRESHOLD,
-        score_threshold=0.25,
-        clip_boxes = False
-    )
-
-    return o_image, o_boxes, scores, classes, detections
-
-def bbox_iou(box1, box2):
-    w = max(min(box1[2], box2[2]) - max(box1[0], box2[0]), 0)
-    h = max(min(box1[3], box2[3]) - max(box1[1], box2[1]), 0)
-
-    g = ((box1[2] - box1[0]) * (box1[3] - box1[1])) + ((box2[2] - box2[0]) * (box2[3] - box2[1]))
-  
-    iou = (w * h)/g if (w * h) != 0 else 0.
-
-    return iou
-
-
-if __name__ == '__main__':
-    annot_path = 'dataset/server_room/test_digit.txt'
+    image_idx = 0
     
-    with open(annot_path, 'r') as anno:
+    list_filename = []
+    list_classes = []
+    list_boxes = []
+    list_scores = []
+    
+    with open(data_path, 'r') as anno:
         lines = anno.readlines()
+    
+    dir_path = os.path.dirname(data_path)
+        
+    total = len(lines)
+    start_time = time()
+    pre_elap = 0.0
+    fps = 0.0
+        
+    for row in lines:
+        col = row.split()
+        filename = os.path.join(dir_path, col[0])
+        
+        org_img = cv2.imread(filename)
+        org_img = cv2.cvtColor(org_img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(org_img, (INPUT_SIZE, INPUT_SIZE))
+        img = img.astype(np.float32) / 255.
+        img = img.reshape(1, img.shape[0], img.shape[1], img.shape[2])
+        
+        h,w,_ = org_img.shape
+        
+        preds = model(img)
+        
+        locs, confs = decode_tf(preds[0], int(INPUT_SIZE/STRIDES[0]), NUM_CLASS, STRIDES, ANCHORS, i=0, XYSCALE = XYSCALE)
+        
+        locs = locs.cpu().numpy().reshape(-1,4)
+        confs = confs.cpu().numpy().reshape(-1,10)
+        
+        out_boxes = []
+        out_labels = []
+        out_scores = []
+        
+        for c in range(0, NUM_CLASS):
+            cls_scores = confs[:, c]
 
-        preds = []
-        trues = []
-
-        for row in tqdm(lines):
-            col = row.split()
-            img_path = col[0]
-
-            img, o_boxes, scores, classes, detections = infer(model, img_path, IOU_THRESHOLD=IOU_LOSS_THRESH) 
-
-            num_objects = len(col[1:])
-
-            collect_count = 0
-
-            pred_label = np.zeros(shape=[num_objects], dtype=np.int16)
-            # pred_label += 10
-
-            img_w, img_h, _ = img.shape
-            for i, bbox in enumerate(col[1:]):
-                x1, y1, x2, y2, label = bbox.split(',')
-
-                t_box = np.array([x1, y1, x2, y2], dtype = np.float32)
-                t_label = int(label)
-
-                trues.append(t_label)
-
-                batch_idx = 0
-                cur_iou = IOU_LOSS_THRESH
-                for j in range(detections[0].numpy()):
-                    p_box = o_boxes[batch_idx][j]
-
-                    p_box = p_box / INPUT_SIZE
-                    x1 = int(img_w * p_box[0])
-                    y1 = int(img_h * p_box[1])
-                    x2 = int(img_w * p_box[2])
-                    y2 = int(img_h * p_box[3])
-
-                    p_box = [x1,y1,x2,y2]
-
-                    iou = bbox_iou(t_box, p_box)
-                    if iou >= cur_iou:
-                        pred_label[i] = int(classes[batch_idx][j])
-                        cur_iou = iou
-                        
-                        
-#             log_file = os.path.join('check_points/ssd/outputs/detects', '{}.txt')
-
-#             for cls, box, score in zip(classes, boxes, scores):
-#                 cls_name = info['idx_to_name'][cls - 1]
-#                 with open(log_file.format(cls_name), 'a') as f:
-#                     f.write('{} {} {} {} {} {}\n'.format(
-#                         filename,
-#                         score,
-#                         *[coord for coord in box]))
-
-
-            preds += pred_label.tolist()
+            score_idx = cls_scores > 0.8
             
-    from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, plot_confusion_matrix
-    import matplotlib.pyplot as plt
+            cls_boxes = locs[score_idx]
+            cls_scores = cls_scores[score_idx]
+            
+            cls_boxes[..., :2] = cls_boxes[..., :2] - (cls_boxes[..., 2:] / 2)
+            cls_boxes[..., 2:] = cls_boxes[..., 2:] + cls_boxes[..., :2]
+            
+            nms_idx = compute_nms(cls_boxes, cls_scores , 0.6, 5)
+            
+            cls_boxes = np.take(cls_boxes, nms_idx, axis=0)
+            cls_scores = np.take(cls_scores, nms_idx, axis=0)
+            cls_labels = [c] * cls_boxes.shape[0]
 
-    mat_con = (confusion_matrix(trues, preds, labels=[0,1,2,3,4,5,6,7,8,9,10]))
-    plt.matshow(mat_con, cmap=plt.cm.Blues, alpha=0.5)
-    for m in range(mat_con.shape[0]):
-        for n in range(mat_con.shape[1]):
-            plt.text(x=n,y=m,s=mat_con[m, n], va='center', ha='center', size='xx-large')
+            out_boxes.append(cls_boxes)
+            out_labels.extend(cls_labels)
+            out_scores.append(cls_scores)
+            
+        out_boxes = np.concatenate(out_boxes, axis=0)
+        out_scores = np.concatenate(out_scores, axis=0)
 
-    plt.xticks([0,1,2,3,4,5,6,7,8,9,10], labels=['0','1','2','3','4','5','6','7','8','9','none'])
-    plt.yticks([0,1,2,3,4,5,6,7,8,9,10], labels=['0','1','2','3','4','5','6','7','8','9','none'])
-    plt.xlabel('Predictions', fontsize=16)
-    plt.ylabel('Trues', fontsize=16)
-    plt.title('Confusion Matrix', fontsize=15)
+        out_boxes = out_boxes / INPUT_SIZE  * [w,h,w,h]
+        out_boxes = out_boxes.astype(dtype=int)
+        
+        
+        result_str = []
+        for idx in range(len(out_boxes)):
+            box = out_boxes[idx]
+            cls = out_labels[idx]
+            result_str.append( f'{box[0]},{box[1]},{box[2]},{box[3]},{cls}')
+        result_str = ' '.join(result_str)
+        logger.info('{}/{} - {}, Predicted : {} - fps: {:.1f}'.format(image_idx + 1, total, os.path.basename(filename), result_str, fps))
+        
+        if display:
+            visualizer.display_image(org_img, out_boxes, out_labels, '{:d}'.format(image_idx))
+        
+        if save:
+            visualizer.save_image(org_img, out_boxes, out_labels, '{:d}'.format(image_idx))
+            
+        image_idx = image_idx + 1
+        
+        list_filename.append(filename)
+        list_classes.append(out_labels)
+        list_boxes.append(out_boxes)
+        list_scores.append(out_scores)
+        
+        elap = time() - start_time
+        fps = max(0.0, 1.0 / (elap - pre_elap))
+        pre_elap = elap
+        
+    elap = time() - start_time
+    fps = total / elap
+    
+    
+    if(display):
+        cv2.destroyAllWindows()
+        
+    log_file = os.path.join(logging_dir, 'outputs', 'detects', '{}.txt')
+    logger.info('calcurate mAP.. ')
+    
+    for cls in CLASSES:
+        f = log_file.format(cls)
+        if os.path.exists(f):
+            os.remove(f)
+    
+    for filename, classes, boxes, scores in zip(list_filename, list_classes, list_boxes, list_scores):    
+        for cls, box, score in zip(classes, boxes, scores):
+            cls_name = CLASSES[cls]
+            with open(log_file.format(cls_name), 'a') as f:
+                f.write('{} {} {} {} {} {}\n'.format(
+                    os.path.basename(filename),
+                    score,
+                    *[coord for coord in box]))
+    
+    iou_thresh = 0.70
+    mAP = evaluate(display = False, iou_thresh = iou_thresh)
+    
+    for key, value in mAP.items():
+        if key == 'mAP': continue
+        logger.info('Class {}: AP {:.4f}'.format(key, value))
+    logger.info('mAP@{}: {:.4f}, fps: {:.4f}'.format(iou_thresh, mAP['mAP'], fps))
+    
 
-    plt.show()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--anno-path', default='dataset/server_room/train_digit.txt')
+    parser.add_argument('--logging_dir', default='check_points/yolo')
+    parser.add_argument('--model-path', default='check_points/yolo/epoch_latest.h5')
+    parser.add_argument('--display', dest='display', type=str2bool, default=False)
+    parser.add_argument('--save', dest='save', type=str2bool, default=False)
+    args = parser.parse_args()
+    
+    logger.info(args)
+    inference(args.model_path, args.anno_path, args.logging_dir, args.display, args.save)

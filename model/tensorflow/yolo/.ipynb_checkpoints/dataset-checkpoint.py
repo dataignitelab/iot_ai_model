@@ -270,7 +270,9 @@ class Dataset(object):
 
     def parse_annotation(self, annotation):
         line = annotation.split()
+        dirname = os.path.dirname(self.annot_path)
         image_path = line[0]
+        image_path = os.path.join(dirname, image_path)
         if not os.path.exists(image_path):
             raise KeyError("%s does not exist ... " % image_path)
         image = cv2.imread(image_path)

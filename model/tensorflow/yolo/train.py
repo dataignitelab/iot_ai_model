@@ -8,19 +8,12 @@ import matplotlib.pyplot as plt
 import cv2
 import logging
 import os
+import argparse
 
 from yolo import createModel, decode, compute_loss, decode_train
 from dataset import Dataset
 
 plt.rcParams["figure.figsize"] = (20,10)
-
-check_point_path = 'check_points/yolo'
-
-INPUT_SIZE = 416
-NUM_CLASS = 10
-EPOCHS = 100
-BATCH_SIZE = 64
-IOU_LOSS_THRESH = 0.5
 
 CLASSES = ['0','1','2','3','4','5','6','7','8','9']
 ANCHORS        = [23,27, 37,58, 81,82, 81,82, 135,169, 344,319]
@@ -51,6 +44,28 @@ palette = [(255, 56, 56),
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--anno-path', default='dataset/server_room/train_digit.txt')
+    parser.add_argument('--batch-size', default=64, type=int)
+    parser.add_argument('--num-batches', default=-1, type=int)
+    parser.add_argument('--initial-lr', default=1e-3, type=float)
+    parser.add_argument('--num-epochs', default=100, type=int)
+    parser.add_argument('--checkpoint-dir', default='./check_points/yolo')
+    parser.add_argument('--checkpoint-path', default='check_points/yolo/epoch_latest.h5') # latest
+
+    args = parser.parse_args()
+    
+    check_point_path = args.checkpoint_dir
+
+    INPUT_SIZE = 416
+    NUM_CLASS = len(CLASSES)
+    EPOCHS = args.num_epochs
+    BATCH_SIZE = args.batch_size
+    IOU_LOSS_THRESH = 0.5
+    START_LR = args.initial_lr
+    END_LR = 1e-6
+    annot_path = args.anno_path
+    
     model = createModel(NUM_CLASS, INPUT_SIZE, STRIDES, ANCHORS, XYSCALE)
     
     # model = tf.keras.models.load_model('check_points/yolo/400_best', compile = False)
@@ -61,10 +76,13 @@ if __name__ == '__main__':
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
     start_time = time.time()
+    
+    
     model_save_path = "{}/log/{}/{:.0f}/".format(check_point_path,training_name, start_time)
 
     if not os.path.exists(model_save_path):
         os.makedirs(model_save_path)
+        
     logger.handlers.clear()
     logging_path = "{}train.log".format(model_save_path)
     fh = logging.FileHandler(filename=logging_path)
@@ -74,20 +92,16 @@ if __name__ == '__main__':
 
     logger.info('logging file path : {}'.format(logging_path))
     
-    annot_path = 'dataset/server_room/test_digit.txt'
     trainset = Dataset(annot_path, INPUT_SIZE, BATCH_SIZE,  CLASSES, ANCHORS, ANCHOR_PER_SCALE, STRIDES, data_aug=True, is_training=True)
     logger.info('dataset loaded : {}'.format(len(trainset)))
-    
-    EPOCHS = 500
+
     progress = tqdm(range(EPOCHS))
     global_steps = tf.Variable(1, trainable=False, dtype=tf.int64)
     total_steps = len(trainset) * EPOCHS
 
     elapsed = 0.
     pre_total_loss= tf.constant(0.)
-
-    START_LR = 1e-3
-    END_LR = 1e-6
+    
     optimizer = tf.keras.optimizers.Adam(learning_rate=START_LR)
 
     for epoch in progress:
@@ -140,7 +154,7 @@ if __name__ == '__main__':
         elapsed = time.time()- start_time
 
 
-        if(epoch % 100) == 0 and epoch > 0:
+        if(epoch % 10) == 0 and epoch > 0:
             log = 'trn {:d}: elapsed {:.2f}s, iou loss {:.4f}, conf loss {:.4f}, prob loss {:.4f}, total loss {:.4f}, lr {:.6f}'.format(
                     epoch, 
                     elapsed, 
@@ -150,6 +164,6 @@ if __name__ == '__main__':
                     pre_total_loss.numpy(),
                     lr.numpy())
             logger.info(log)
-            model.save("{}/{}".format(check_point_path, epoch))
+            model.save("{}/yolo_epoch_{}.h5".format(check_point_path, epoch))
 
-    model.save("{}/{}".format(check_point_path, epoch))
+    model.save("{}/yolo_epoch_latest.h5".format(check_point_path))
