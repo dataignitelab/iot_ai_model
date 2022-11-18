@@ -12,8 +12,6 @@ from anchor import generate_default_boxes
 from network import create_ssd
 from losses import create_losses
 
-NUM_CLASSES = 11
-
 @tf.function
 def train_step(imgs, gt_confs, gt_locs, ssd, criterion, optimizer):
     with tf.GradientTape() as tape:
@@ -51,7 +49,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight-decay', default=5e-4, type=float)
     parser.add_argument('--num-epochs', default=100, type=int)
     parser.add_argument('--checkpoint-dir', default='./check_points/ssd')
-    parser.add_argument('--checkpoint-path', default='check_points/ssd/ssd_epoch_latest.h5') # latest
+    parser.add_argument('--checkpoint-path', default=None) # latest 'check_points/ssd/ssd_epoch_latest.h5'
     parser.add_argument('--pretrained-type', default='base')
     parser.add_argument('--gpu-id', default='0')
 
@@ -60,6 +58,11 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
+    
+    
+    labels = ['0','1','2','3','4','5','6','7','8','9', '.']
+    
+    NUM_CLASSES = len(labels) + 1
 
     with open('model/tensorflow/ssd/config.yml') as f:
         cfg = yaml.load(f, Loader=yaml.Loader)
@@ -75,13 +78,12 @@ if __name__ == '__main__':
         args.anno_path, default_boxes,
         config['image_size'],
         args.batch_size, args.num_batches,
-        mode='train', augmentation = False)  # the patching algorithm is currently causing bottleneck sometimes   , augmentation=['flip']
+        mode='train', augmentation = False,labels = labels)  # the patching algorithm is currently causing bottleneck sometimes   , augmentation=['flip']
     
     try:
         ssd = create_ssd(NUM_CLASSES, args.arch,
                         args.pretrained_type,
-                        checkpoint_dir=args.checkpoint_path, checkpoint_path= args.checkpoint_path)
-        
+                        checkpoint_dir=args.checkpoint_path, checkpoint_path=args.checkpoint_path)
     except Exception as e:
         print(e)
         print('The program is exiting...')
@@ -108,14 +110,16 @@ if __name__ == '__main__':
         start = time.time()
         i = 0
         progress = tqdm(batch_generator)
-        for _, org_imgs, imgs, gt_confs, gt_locs in progress:
+        for _, imgs, gt_confs, gt_locs in progress:
             loss, conf_loss, loc_loss, l2_loss = train_step(imgs, gt_confs, gt_locs, ssd, criterion, optimizer)
+            
             avg_loss = (avg_loss * i + loss.numpy()) / (i + 1)
             avg_conf_loss = (avg_conf_loss * i + conf_loss.numpy()) / (i + 1)
             avg_loc_loss = (avg_loc_loss * i + loc_loss.numpy()) / (i + 1)
             
             progress.set_description('Epoch: {} Batch {} Time: {:.2}s | Loss: {:.4f} Conf: {:.4f} Loc: {:.4f}'.format(
-            epoch + 1, i + 1, time.time() - start, avg_loss, avg_conf_loss, avg_loc_loss))
+                epoch + 1, i + 1, time.time() - start, avg_loss, avg_conf_loss, avg_loc_loss))
+            
             i = i + 1
         
         # avg_val_loss = 0.0

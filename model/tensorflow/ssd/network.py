@@ -152,7 +152,7 @@ def create_ssd(num_classes, arch, pretrained_type,
     net = SSD(num_classes, arch, model = model)
     net(tf.random.normal((1, 512, 512, 3)))
     
-    if os.path.isfile(checkpoint_path):
+    if checkpoint_path is not None and os.path.isfile(checkpoint_path):
         net.load_weights(checkpoint_path)
         print('loaded weight', checkpoint_path)
     

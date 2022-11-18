@@ -7,7 +7,7 @@ import random
 import numpy as np
 import tensorflow as tf
 
-from box_utils import compute_iou
+# from box_utils import compute_iou
 
 
 palette = [
@@ -113,38 +113,80 @@ class ImageVisualizer(object):
         cv2.imshow(name, image)
         if wait > -1:
             cv2.waitKey(wait)
+            
+    def plt_image(self, img, boxes, labels, name = 'img', wait=1):
+        image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        for i, box in enumerate(boxes):
+            idx = labels[i] - 1
+            cls_name = self.idx_to_name[idx]
+            # top_left = (int(box[0]), int(box[1]))
+            # bot_right = (int(box[2]), int(box[3]))
 
+            color = palette[idx]
+
+            cv2.rectangle(image, (box[0], box[1]), (box[2], box[3]), color, 1)
+            cv2.rectangle(image, (box[0], box[1]-10), (box[0]+10,box[1]), color, -1)
+            cv2.putText(image, '{}'.format(cls_name), (box[0], box[1]-1), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1)
         
-def generate_patch(boxes, threshold):
-    """ Function to generate a random patch within the image
-        If the patch overlaps any gt boxes at above the threshold,
-        then the patch is picked, otherwise generate another patch
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        plt.imshow(image)
+        plt.show()
 
-    Args:
-        boxes: box tensor (num_boxes, 4)
-        threshold: iou threshold to decide whether to choose the patch
+def padding(img, boxes = None, constant_values = 144, pad_type = 'constant'):
+    img = np.array(img)
+    h, w, _ = img.shape
+    gap = abs(w - h) // 2
+    w_gap = 0
+    h_gap = 0
+    if w > h:
+        reshape_img = np.pad(img, ((gap, gap), (0, 0), (0,0)), pad_type, constant_values=constant_values)
+        h_gap = gap
+        new_h = h + (gap*2)
+        new_w = w
+    else:
+        reshape_img = np.pad(img, ((0, 0), (gap, gap), (0,0)), pad_type, constant_values=constant_values)
+        w_gap = gap
+        new_w = w + (gap*2)
+        new_h = h
 
-    Returns:
-        patch: the picked patch
-        ious: an array to store IOUs of the patch and all gt boxes
-    """
-    while True:
-        patch_w = random.uniform(0.1, 1)
-        scale = random.uniform(0.5, 2)
-        patch_h = patch_w * scale
-        patch_xmin = random.uniform(0, 1 - patch_w)
-        patch_ymin = random.uniform(0, 1 - patch_h)
-        patch_xmax = patch_xmin + patch_w
-        patch_ymax = patch_ymin + patch_h
-        patch = np.array(
-            [[patch_xmin, patch_ymin, patch_xmax, patch_ymax]],
-            dtype=np.float32)
-        patch = np.clip(patch, 0.0, 1.0)
-        ious = compute_iou(tf.constant(patch), boxes)
-        if tf.math.reduce_any(ious >= threshold):
-            break
+    if boxes is not None:
+        boxes = boxes * [w, h, w, h]    
+        boxes = boxes + [w_gap, h_gap, w_gap, h_gap]
+        boxes = boxes / [new_w, new_h, new_w, new_h]
+        
+    img = Image.fromarray(reshape_img)
+    return img, boxes
+            
+# def generate_patch(boxes, threshold):
+#     """ Function to generate a random patch within the image
+#         If the patch overlaps any gt boxes at above the threshold,
+#         then the patch is picked, otherwise generate another patch
 
-    return patch[0], ious[0]
+#     Args:
+#         boxes: box tensor (num_boxes, 4)
+#         threshold: iou threshold to decide whether to choose the patch
+
+#     Returns:
+#         patch: the picked patch
+#         ious: an array to store IOUs of the patch and all gt boxes
+#     """
+#     while True:
+#         patch_w = random.uniform(0.1, 1)
+#         scale = random.uniform(0.5, 2)
+#         patch_h = patch_w * scale
+#         patch_xmin = random.uniform(0, 1 - patch_w)
+#         patch_ymin = random.uniform(0, 1 - patch_h)
+#         patch_xmax = patch_xmin + patch_w
+#         patch_ymax = patch_ymin + patch_h
+#         patch = np.array(
+#             [[patch_xmin, patch_ymin, patch_xmax, patch_ymax]],
+#             dtype=np.float32)
+#         patch = np.clip(patch, 0.0, 1.0)
+#         ious = compute_iou(tf.constant(patch), boxes)
+#         if tf.math.reduce_any(ious >= threshold):
+#             break
+
+#     return patch[0], ious[0]
 
 def random_resize(img, boxes):
     w, h = img.size
@@ -178,18 +220,19 @@ def random_resize(img, boxes):
     boxes = (boxes * [w, h, w, h] + [pixel_x, pixel_y, pixel_x, pixel_y]) / [new_w, new_h, new_w, new_h]    
     return img, boxes
 
-def random_brightness(img, factor = (0.2, 1.8)):
+def random_brightness(img, factor = (0.5, 1.7)):
     enhancer = ImageEnhance.Brightness(img)
 
     if np.random.random() > 0.5:
-        factor = np.random.uniform(factor[0], 0.5)
+        factor = np.random.uniform(factor[0], 0.8)
     
     else:
-        factor = np.random.uniform(factor[0], 1.5)
+        factor = np.random.uniform(factor[0], 1.2)
 
     img = enhancer.enhance(factor)
 
     return img
+
 
 def random_translate(img, boxes):
     w, h = img.size

@@ -7,7 +7,7 @@ import random
 
 from box_utils import compute_target 
 from box_utils_numpy import compute_target as compute_target_numpy
-from image_utils import random_resize, random_translate
+from image_utils import random_resize, random_translate, random_brightness, padding
 from functools import partial
 
 
@@ -22,9 +22,9 @@ class VOCDataset():
     """
 
     def __init__(self, data_anno_path, default_boxes,
-                 new_size, num_examples=-1, augmentation=True, use_tensor = True):
+                 new_size, num_examples=-1, augmentation=True, use_tensor = True, labels = ['0','1','2','3','4','5','6','7','8','9']):
         super(VOCDataset, self).__init__()
-        self.idx_to_name = ['0','1','2','3','4','5','6','7','8','9']
+        self.idx_to_name = labels
         self.name_to_idx = dict([(v, k) for k, v in enumerate(self.idx_to_name)])
         self.base_dir = os.path.dirname(data_anno_path) 
         self.image_path = []
@@ -138,12 +138,19 @@ class VOCDataset():
             w, h = org_img.size
             boxes, labels = self._get_annotation(index, (h, w))
 
-            img = org_img
+            if self.augmentation and random.random() < 0.5:
+                org_img = random_brightness(org_img)  
+            
+            img, boxes = padding(org_img, boxes)
+            
+            # img = org_img
+            
             if self.augmentation :
                 if random.random() < 0.5:
                     img, boxes = random_resize(img, boxes)
                 if random.random() < 0.5:
                     img, boxes = random_translate(img, boxes)
+                  
             
             # augmentation_method = np.random.choice(self.augmentation)
             # if augmentation_method == 'patch':
@@ -166,19 +173,18 @@ class VOCDataset():
             else:
                 gt_confs, gt_locs = compute_target_numpy(self.default_boxes, boxes, labels)
             
-            yield filename, org_img, img, gt_confs, gt_locs
+            yield filename, img, gt_confs, gt_locs
 
 
 def create_batch_generator(data_anno_path, default_boxes,
                            new_size, batch_size, num_batches,
                            mode,
-                           augmentation=True):
+                           augmentation=True, labels = None):
     num_examples = batch_size * num_batches if num_batches > 0 else -1
-    voc = VOCDataset(data_anno_path, default_boxes,
-                     new_size, num_examples, augmentation)
+    voc = VOCDataset(data_anno_path, default_boxes, new_size, num_examples, augmentation, labels = labels)
 
     info = {
-        'idx_to_name': voc.idx_to_name,
+        'idx_to_name': labels,
         'name_to_idx': voc.name_to_idx,
         'length': len(voc)
         # 'image_dir': voc.image_dir,
@@ -186,7 +192,7 @@ def create_batch_generator(data_anno_path, default_boxes,
     }
 
     if mode == 'train':
-        train_dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.float32, tf.int64, tf.float32))
+        train_dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.int64, tf.float32))
         # val_gen = partial(voc.generate, subset='val')
         # val_dataset = tf.data.Dataset.from_generator(
         #     val_gen, (tf.string, tf.float32, tf.int64, tf.float32))
@@ -194,6 +200,31 @@ def create_batch_generator(data_anno_path, default_boxes,
         train_dataset = train_dataset.shuffle(40).batch(batch_size)
         return train_dataset, info
     else:
-        dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.float32, tf.int64, tf.float32))
+        dataset = tf.data.Dataset.from_generator(voc.generate, (tf.string, tf.float32, tf.int64, tf.float32))
         dataset = dataset.batch(batch_size)
         return dataset.take(num_batches), info
+
+
+# unit test
+if __name__ == '__main__':
+    from anchor import generate_default_boxes
+    
+    data_anno_path = '../../../dataset/digital_digit/anno_digit_new.txt'
+    labels = ['0','1','2','3','4','5','6','7','8','9','.']
+    
+    config = {}
+    config['scales'] =  [0.07, 0.2, 0.375, 0.55, 0.725, 0.9, 1.075]
+    config['fm_sizes'] = [38, 19, 10, 5, 3, 1]
+    config['ratios'] = [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
+    image_size = 300
+    
+    default_boxes = generate_default_boxes(config)
+    
+    assert os.path.exists(data_anno_path) == True, f'Not found file : {data_anno_path}'
+    
+    dataset = VOCDataset(data_anno_path, default_boxes, image_size, -1, idx_to_idx = labels)
+    
+    for x in dataset.generate():
+        print(x[0])
+        break
+    
