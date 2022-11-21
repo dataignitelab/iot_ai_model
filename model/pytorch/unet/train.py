@@ -160,14 +160,6 @@ if __name__ == '__main__':
         with torch.no_grad():
             loss, acc = fit(model, val_loader, criterion, optimizer, device, half=half)
 
-            # if loss >= min_loss:
-            #     early_count += 1
-            #     if early_count >= early_stopping:
-            #         break
-            # else:
-            #     min_loss = loss
-            #     early_count = 0
-
             if len(val_loss) > 0 and min(val_loss) > loss:
                 torch.save(model.state_dict(), f"{checkpoints_path}/model_state_dict_{epoch}_best.pt")
 
