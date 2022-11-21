@@ -13,3 +13,5 @@ core.*
 *.onnx
 *.engine
 *.pyc
+.ipynb_checkpoints/
+__pycache__/
