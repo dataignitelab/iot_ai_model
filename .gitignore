@@ -13,6 +13,7 @@ core.*
 *.onnx
 *.engine
 *.pyc
-.DS_Store
-.ipynb_checkpoints/
-__pycache__/
+**/.DS_Store
+**/.ipynb_checkpoints/
+**/__pycache__/
+**/.*.swap
