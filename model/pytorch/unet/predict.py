@@ -9,6 +9,9 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import random_split
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 from model import Unet
 from dataset import ImageDataset, load_image
 
@@ -76,8 +79,36 @@ def display_image(img, mask, local = False):
     # plt.imshow(img)
     cv2.imshow('img', img)
     cv2.waitKey(1)
+    
+def show_image(image, alpha=1, title=None):
+    plt.imshow(image, alpha=alpha)
+    plt.title(title)
+    plt.axis('off')
+    
+def convert_tensor_to_img(tensor):
+    img = tensor.cpu().detach().numpy()
+    img = np.transpose(img, (1,2,0))
+    return img
 
-def inference(model_path, data_path, display = False):
+def show_predictions(epoch, img, mask, pred_mask, checkpoints_path= None):
+    plt.figure(figsize=(10,4))
+
+    plt.subplot(1,3,1)
+    img = np.transpose(img.numpy(), (1,2,0))
+    show_image(img, title='Original Image')
+
+    plt.subplot(1,3,2)
+    mask = np.transpose(mask.numpy(), (1,2,0))
+    show_image(mask, title='Original Mask')
+
+    plt.subplot(1,3,3)
+    pred_img = convert_tensor_to_img(pred_mask)
+    show_image(pred_img, title='Predicted Mask')
+
+    plt.savefig(os.path.join(checkpoints_path, 'val', f'{epoch}.jpg'))
+            
+
+def inference(model_path, data_path, checkpoints_path = 'check_points/unet', display = False, save = False):
     logger.info('model loading.. {}'.format(model_path))
     batch_size = 1
      # os.path.join("..","models","main.trt")
@@ -97,27 +128,19 @@ def inference(model_path, data_path, display = False):
     masks = []
     filepaths = []
     
-    checkpoints_path = 'check_points/unet'
-    model_path = f"{checkpoints_path}/model_state_dict_latest.pt"
-    output = f'{checkpoints_path}/model.onnx'
+    checkpoints_path = checkpoints_path
+    model_path = model_path
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Unet().to(device)
     model.load_state_dict(torch.load(model_path))
     model = model.eval()
     
-#     dataset = ImageDataset(data_path, augmentation=False, preload= False)
-#     loader = torch.utils.data.DataLoader(dataset, batch_size= BATCH_SIZE, shuffle=False)
-    
-#     total = len(dataset)
-#     logger.info('number of test dataset : {}'.format(total))
-    
     with open(data_path, 'r') as f:
         line = f.readlines()
 
     total = len(line)
     logger.info('number of test dataset : {}'.format(total))
-    
     
     start_time = time()
     pre_elap = 0.0
@@ -162,6 +185,9 @@ def inference(model_path, data_path, display = False):
 
             if(display):
                 display_image(img, output)
+                
+            if(save):
+                show_predictions(idx, img[0].cpu(), mask[0].cpu(), output[0].cpu(), checkpoints_path)
 
             elap = time() - start_time
             fps = max(0.0, 1.0 / (elap - pre_elap))
@@ -170,22 +196,18 @@ def inference(model_path, data_path, display = False):
     if(display):
         cv2.destroyAllWindows()
 
-    # preds = torch.tensor(preds)
-    # targets = torch.tensor(targets)
-    # # acc = (correct/len(dataset))
-    # f1_score = f1(preds, targets) 
-    
     elap = time() - start_time
     fps = total / elap
-    logger.info('dice coefficient: {:.4f}, fps: {:.4f}'.format(cost/total, fps))
+    logger.info('dice coefficient: {:.4f}, fps: {:.4f}'.format(1-(cost/total), fps))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='unet')
-    
     parser.add_argument('--model-path', dest='model_path', type=str, default='check_points/unet/model.engine')
     parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/supervisely_person/test_data_list.txt')
+    parser.add_argument('--checkpoints-path', dest='checkpoints_path', type=str, default='check_points/unet')
     parser.add_argument('--display', dest='display', type=str2bool, default=False)
+    parser.add_argument('--save', dest='save', type=str2bool, default=False)
     
     args = parser.parse_args()
     logger.info(args)
-    inference(args.model_path, args.data_path, args.display)
+    inference(args.model_path, args.data_path, args.checkpoints_path, args.display, args.save)

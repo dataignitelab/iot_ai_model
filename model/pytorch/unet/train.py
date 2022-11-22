@@ -3,23 +3,17 @@ from tqdm import tqdm
 from time import time
 import logging
 import os
+import argparse
 
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import random_split
+import matplotlib.pyplot as plt
+import numpy as np
 
 from model import Unet
 from dataset import ImageDataset
-
-BATCH_SIZE = 16
-EPOCHS = 1000
-LR = 0.0001
-
-checkpoints_path = 'check_points/unet'
-data_path = 'dataset/supervisely_person'
-
-paths = glob(os.path.join(data_path,"**/*.png"))
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -107,24 +101,37 @@ def fit(model, dataloader, criterion, optimizer, device, half = False):
         output[output < 0.5] = 0
         correct += output.eq(target).int().sum()
 
-    acc = (correct/len(dataloader.dataset))
+    # acc = (correct/len(dataloader.dataset))
     loss = loss/len(dataloader.dataset)
-    logger.info("{}, duration:{:6.1f}s, acc:{:.4f}, loss:{:.4f}".format(('trn' if model.training else 'val'), 
+    logger.info("{}, duration:{:6.1f}s, loss:{:.4f}".format(('trn' if model.training else 'val'), 
                                                                          time()-start_time, 
-                                                                         acc, 
                                                                          loss ))
     return float(loss), float(acc)
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='train..')
+    parser.add_argument('--data-path', dest='data_path', type=str, default='dataset/supervisely_person')
+    parser.add_argument('--batch-size', dest='batch_size', type=int, default=16)
+    parser.add_argument('--lr', dest='lr', type=float, default=1e-4)
+    parser.add_argument('--num-epochs', dest='num_epochs', type=int, default=100)
+    parser.add_argument('--checkpoints-path', dest='checkpoints_path', type=str, default='check_points/unet')
+    args = parser.parse_args()
+    
+    batch_size = args.batch_size
+    epochs = args.num_epochs
+    lr = args.lr
+    checkpoints_path = args.checkpoints_path
+    data_path = args.data_path
+    
     dataset = ImageDataset(data_path)
     
     dataset_size = len(dataset)
     trn_size = int(dataset_size * 0.8)
     val_size = dataset_size - trn_size
     trn_ds, val_ds = random_split(dataset, [trn_size, val_size])
-    trn_loader = torch.utils.data.DataLoader(trn_ds, batch_size= BATCH_SIZE, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(val_ds, batch_size= BATCH_SIZE, shuffle=False)
+    trn_loader = torch.utils.data.DataLoader(trn_ds, batch_size= batch_size, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_ds, batch_size= batch_size, shuffle=False)
     logger.info(f'trn: {len(trn_ds)}, val: {len(val_ds)}')    
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -135,8 +142,7 @@ if __name__ == '__main__':
     logger.info(f'loaded model (params {params_cnt})')
     
     criterion = nn.BCELoss()
-    optimizer = optim.Adam(model.parameters(), lr = LR)
-    
+    optimizer = optim.Adam(model.parameters(), lr = lr)
     
     trn_loss = []
     trn_acc = []
@@ -147,7 +153,7 @@ if __name__ == '__main__':
 
     min_loss = 99999.
     early_count = 0
-    for epoch in range(1, EPOCHS+1):
+    for epoch in range(1, epochs+1):
         logger.info(f'epoch {epoch}')
 
         model.train()
@@ -161,10 +167,10 @@ if __name__ == '__main__':
             loss, acc = fit(model, val_loader, criterion, optimizer, device, half=half)
 
             if len(val_loss) > 0 and min(val_loss) > loss:
-                torch.save(model.state_dict(), f"{checkpoints_path}/model_state_dict_{epoch}_best.pt")
+                torch.save(model.state_dict(), f"{checkpoints_path}/model_epoch_{epoch}_best.pt")
 
             val_loss.append(loss)
 
         show_predictions(epoch, model, val_ds)
 
-    torch.save(model.state_dict(), f"{checkpoints_path}/model_state_dict_{epoch}.pt")
+    torch.save(model.state_dict(), f"{checkpoints_path}/model_epoch_latest.pt")
