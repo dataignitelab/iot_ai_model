@@ -20,8 +20,20 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 if __name__ == '__main__':
+    import argparse
+
+    start_time = time.time()
+
+    parser = argparse.ArgumentParser(description='train LSTM..')
+    parser.add_argument('--name', dest='name', type=str, default='lstm')
+    parser.add_argument('--dataset-path', dest='dataset_path', type=str, default='dataset/current/test_500')
+    parser.add_argument('--model-path', dest='model_path', type=str, default="check_points/lstm/model_state_dict_best.pt")
+
+    args = parser.parse_args()
+    
+    
     labels = ['normal', 'def_baring', 'rotating_unbalance', 'def_shaft_alignment', 'loose_belt']
-    model_path = "check_points/lstm/model_state_dict_best.pt"
+    model_path = args.model_path
     num_classes = len(labels)
     use_cpu = False
     
@@ -31,7 +43,7 @@ if __name__ == '__main__':
     model.half()
     model.eval()
 
-    path = 'dataset/current/test_500/**/*.csv'
+    path = os.path.join(args.dataset_path,'**/*.csv')
     dataset = CurrentDataset(path)
     total = len(dataset)
     dataloader = DataLoader(dataset,
@@ -54,7 +66,6 @@ if __name__ == '__main__':
     
     logger.info(f'loaded {device}')
     with torch.no_grad():
-        # progress = tqdm(dataloader)
         for samples in dataloader:
             cnt+=1
             file_path, x_train, y_train = samples

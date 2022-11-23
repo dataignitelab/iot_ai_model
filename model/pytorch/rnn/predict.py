@@ -20,7 +20,19 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 if __name__ == '__main__':
-    model_path = "check_points/rnn/model_state_dict_best.pt"
+    import argparse
+
+    start_time = time.time()
+
+    parser = argparse.ArgumentParser(description='train LSTM..')
+    parser.add_argument('--name', dest='name', type=str, default='lstm')
+    parser.add_argument('--dataset-path', dest='dataset_path', type=str, default='dataset/vibration/test_500')
+    parser.add_argument('--model-path', dest='model_path', type=str, default="check_points/rnn/model_state_dict_best.pt")
+
+    args = parser.parse_args()
+    
+    
+    model_path = args.model_path
     labels = ['normal', 'def_baring', 'rotating_unbalance', 'def_shaft_alignment', 'loose_belt']
     num_classes = len(labels)
     use_cpu = False
@@ -30,7 +42,7 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
-    path = 'dataset/vibration/test_500/**/*.csv'
+    path = os.path.join(args.dataset_path,'**/*.csv')
     dataset = VibrationDataset(path)
     total = len(dataset)
     dataloader = DataLoader(dataset,

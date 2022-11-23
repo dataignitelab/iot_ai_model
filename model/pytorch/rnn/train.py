@@ -18,8 +18,6 @@ from model import RNNModel
 
 logger = logging.getLogger('train_log')
 
-checkpoints_path = "check_points/rnn"
-
 def print_log(text):
     logger.info(text)
 
@@ -130,14 +128,6 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
 
         f1 = f1socre(preds.to('cpu'), targets.to('cpu'))
         avg_cost = avg_cost / total_batch
-        
-        # if avg_cost >= min_loss:
-        #     early_count += 1
-        #     if early_count >= early_stopping:
-        #         break
-        # else:
-        #     min_loss = avg_cost
-        #     early_count = 0
 
         if len(v_f1_hist) > 0 and max(v_f1_hist) < f1:
             save_path = f'{checkpoints_path}/model_state_dict_best.pt'
@@ -167,23 +157,18 @@ if __name__ == "__main__" :
 
     start_time = time.time()
 
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Training RNN..')
     parser.add_argument('--name', dest='name', type=str, default='rnn')
     parser.add_argument('--seed', dest='random_seed', type=int, default=45)
     parser.add_argument('--lr', dest='lr', type=float, default=0.01)
-    parser.add_argument('--epochs', dest='epochs', type=int, default=50)
-    # parser.add_argument('--step_size', dest='step_size', type=int, default=20)
-    parser.add_argument('--batch_size', dest='batch_size', type=int, default=256)
-    # parser.add_argument('--weight_decay', dest='weight_decay', type=float, default=0.4)
-    # parser.add_argument('--pretrained', dest='pretrained', type=bool, default=False)
-    # parser.add_argument('--gamma', dest='gamma', type=float, default=0.1)
-    # parser.add_argument('--test', dest='test_path', default='', type=str)
-    # parser.add_argument('--patience', dest='patience', default=40, type=int)
+    parser.add_argument('--num-epochs', dest='epochs', type=int, default=50)
+    parser.add_argument('--batch-size', dest='batch_size', type=int, default=256)
     parser.add_argument('--cpus', dest='cpus', default=-1, type=int)
-    parser.add_argument('--hidden_dim', dest='hidden_dim', default=8, type=int)
+    parser.add_argument('--hidden-dim', dest='hidden_dim', default=8, type=int)
     parser.add_argument('--layers', dest='layers', default=2, type=int)
-    parser.add_argument('--use_cpu', dest='use_cpu', type=str2bool, default=False)
-    # parser.add_argument('--augmentation', dest='augmentation', type=bool, default=False)
+    parser.add_argument('--use-cpu', dest='use_cpu', type=str2bool, default=False)
+    parser.add_argument('--dataset-path', dest='dataset_path', type=str, default='dataset/vibration/train')
+    parser.add_argument('--checkpoints-path', dest='checkpoints_path', type=str, default="check_points/rnn")
 
     args = parser.parse_args()
 
@@ -191,15 +176,10 @@ if __name__ == "__main__" :
     training_name = args.name
     random_seed = args.random_seed
     epochs = args.epochs
-    # step_size = args.step_size
     lr = args.lr
-    # pretrained = args.pretrained
-    # weight_decay = args.weight_decay
-    # gamma = args.gamma
-    # test_model_path = args.test_path
-    # patience = args.patience
-    # augmentation = args.augmentation
     batch_size = args.batch_size
+    
+    checkpoints_path = args.checkpoints_path
 
     # setup rnn structure
     seq = 3
@@ -220,19 +200,10 @@ if __name__ == "__main__" :
     torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
     g = torch.Generator()
     g.manual_seed(random_seed)
-    # torch.backends.cudnn.deterministic = True
-    # torch.use_deterministic_algorithms(True)
-    # torch.backends.cudnn.benchmark = False
-
-    # train_path = "/content/dataset/train"
-    # test_path = "/content/dataset/test"
 
     device = torch.device("cuda" if (not args.use_cpu) and torch.cuda.is_available() else "cpu")
 
-    # path = 'dataset/iot_sensor_pickle/*.pk'
-    # dataset = VibrationDataset(info_file_path)
-    
-    path = 'dataset/vibration/train/**/*.csv'
+    path = os.path.join(args.dataset_path, '**/*.csv')
     dataset = VibrationDataset(path)
 
     training_size = int(len(dataset) * 0.8)

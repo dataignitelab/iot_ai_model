@@ -18,8 +18,6 @@ from model import LSTMModel
 
 logger = logging.getLogger('train_log')
 
-checkpoints_path = "check_points/lstm"
-model_path = f'{checkpoints_path}/model_state_dict_best.pt'
 
 def print_log(text):
     logger.info(text)
@@ -34,7 +32,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, num_epochs = 1):
+def train_model(model, train_loader, val_loader, criterion, optimizer, checkpoints_path = None, num_epochs = 1):
     t_loss_hist = np.zeros(num_epochs)
     t_f1_hist = np.zeros(num_epochs)
     v_loss_hist = np.zeros(num_epochs)
@@ -130,16 +128,8 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         f1 = f1socre(preds.to('cpu'), targets.to('cpu'))
         avg_cost = avg_cost / total_batch
         
-        # if avg_cost >= min_loss:
-        #     early_count += 1
-        #     if early_count >= early_stopping:
-        #         break
-        # else:
-        #     min_loss = avg_cost
-        #     early_count = 0
-
-        if len(v_f1_hist) > 0 and max(v_f1_hist) < f1:
-            save_path = model_path
+        if len(v_f1_hist) > 0 and max(v_f1_hist) < f1 and checkpoints_path != None:
+            save_path = os.path.join(checkpoints_path, 'model_state_dict_best.pt')
             logger.info(f'best f1! save model. {save_path}')
             torch.save(model.state_dict(), save_path)
             
@@ -166,18 +156,23 @@ if __name__ == "__main__" :
 
     start_time = time.time()
 
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='train LSTM..')
     parser.add_argument('--name', dest='name', type=str, default='lstm')
     parser.add_argument('--seed', dest='random_seed', type=int, default=45)
     parser.add_argument('--lr', dest='lr', type=float, default=0.001)
-    parser.add_argument('--epochs', dest='epochs', type=int, default=50)
-    parser.add_argument('--batch_size', dest='batch_size', type=int, default=512)
+    parser.add_argument('--num-epochs', dest='epochs', type=int, default=50)
+    parser.add_argument('--batch-size', dest='batch_size', type=int, default=512)
     parser.add_argument('--cpus', dest='cpus', default=-1, type=int)
-    parser.add_argument('--use_cpu', dest='use_cpu', type=str2bool, default=False)
-    # parser.add_argument('--augmentation', dest='augmentation', type=bool, default=False)
+    parser.add_argument('--use-cpu', dest='use_cpu', type=str2bool, default=False)
+    parser.add_argument('--dataset-path', dest='dataset_path', type=str, default='dataset/current/train')
+    parser.add_argument('--checkpoints-path', dest='checkpoints_path', type=str, default="check_points/lstm")
 
     args = parser.parse_args()
 
+    
+    checkpoints_path = args.checkpoints_path
+    model_path = f'{checkpoints_path}/model_state_dict_best.pt'
+    
     # setup training
     training_name = args.name
     random_seed = args.random_seed
@@ -200,7 +195,7 @@ if __name__ == "__main__" :
     
     device = torch.device("cuda" if (not args.use_cpu) and torch.cuda.is_available() else "cpu")
     
-    path = 'dataset/current/train/**/*.csv'
+    path = os.path.join(args.dataset_path, '**/*.csv')
     dataset = CurrentDataset(path)
 
     training_size = int(len(dataset) * 0.8)
@@ -249,4 +244,4 @@ if __name__ == "__main__" :
         model.load_state_dict(torch.load(model_path))
         logger.info(f'loaded weight: {model_path}')
     
-    train_hist = train_model(model, trn_dataloader, val_dataloader, criterion, optimizer, num_epochs = epochs)
+    train_hist = train_model(model, trn_dataloader, val_dataloader, criterion, optimizer, checkpoints_path=checkpoints_path, num_epochs = epochs)

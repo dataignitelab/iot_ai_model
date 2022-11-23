@@ -10,7 +10,7 @@ import re
 from Vibration_Feature_Extractor import Extract_Time_Features, Extract_Freq_Features
 import time
 import pickle
-
+import codecs
 import csv
 
 def load_csv(filename):
@@ -21,11 +21,8 @@ def load_csv(filename):
                 vib[idx - 9] = float(col[1])
             elif idx == 2: # label name 
                 label_name = col[1].rstrip()
-                # self.labels.append(label_name)
             elif idx == 3: # label no
                 no = int(col[1])
-                # self.idx_of_label.append(int(col[1]))
-                # self.idx_to_label[int(col[1])] = label_name
             elif idx == 4: # motor spec
                 rpm = int(col[2]) # rpm
                 watt = float(col[3]) # watt
@@ -67,7 +64,6 @@ class VibrationDataset(Dataset):
             features2 = time_vib.Features() # 9
             features = np.concatenate([features1, features2, np.array([watt])])
             features = features.reshape(1, features.shape[0])
-            # print(index, features.shape)
             if seq is None:
                 seq = features
             else:
