@@ -6,41 +6,41 @@
  
 ## 이미지 분류 모델
 
-#### 1. Pytorch 기반 Inception v4
+#### 1. Inception v4
   - 목적 : 주조 제품의 불량 검출 (Classification, 클래스 2종)
   - 학습 데이터 : 224x224 이미지, 5만장
     - https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product
   - 목표 성능치 : 8.8 fps
   - Refercences
-    - [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning](https://arxiv.org/abs/1602.07261)
+    - [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning, 2016](https://arxiv.org/abs/1602.07261)
   
-#### 2. Tensorflow 기반 ResNet50
+#### 2. ResNet50
   - 목적 : 주조 제품의 불량 검출 (Classification, 클래스 2종)
   - 학습 데이터 : 224x224 이미지, 5만장
     - https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product
   - 목표 성능치 : 28.8 fps
   - Refercences
-    - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
+    - [Deep Residual Learning for Image Recognition, 2015](https://arxiv.org/abs/1512.03385)
 
 ## 객체 인식 모델
 
-#### 3. Tensorflow 기반 SSD ResNet18
+#### 3. SSD ResNet18
   - 목적 : 디지털 배전판, 계기판 숫자 인식 (Text recongnition)
   - 학습 데이터 : 서버실 디지털 온도계, 습도계, 시계
     - https://www.kaggle.com/datasets/keshavaprasad/svhnvocyolodigitdetector?resource=download
   - 목표 성능치 : 12.8 fps
   - Refercences
-    - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
-    - [SSD: Single Shot MultiBox Detector](https://arxiv.org/abs/1512.02325)
+    - [Deep Residual Learning for Image Recognition, 2015](https://arxiv.org/abs/1512.03385)
+    - [SSD: Single Shot MultiBox Detector, 2015](https://arxiv.org/abs/1512.02325)
   
-#### 4. Keras 기반 Yolo3
+#### 4.Yolo3
   - 목적 : 디지털 배전판, 계기판 숫자 인식 (Text recongnition)
   - 학습 데이터 : 서버실 디지털 온도계, 습도계, 시계
     - https://www.kaggle.com/datasets/keshavaprasad/svhnvocyolodigitdetector?resource=download  
   - 목표 성능치 : 20 fps
  - Refercences
     - [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/)
-    - [YOLOv3: An Incremental Improvement](https://arxiv.org/abs/1804.02767)
+    - [YOLOv3: An Incremental Improvement, 2018](https://arxiv.org/abs/1804.02767)
 
 ## 이미지 분할 모델 (Image Segmentation)
 
@@ -50,7 +50,7 @@
     - https://www.kaggle.com/datasets/tapakah68/supervisely-filtered-segmentation-person-dataset
   - 목표 성능치 : 13.5 fps
  - Refercences
-    - [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
+    - [U-Net: Convolutional Networks for Biomedical Image Segmentation, 2015](https://arxiv.org/abs/1505.04597)
 
 ## 시계열 분류 모델
 
