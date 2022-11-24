@@ -10,6 +10,9 @@
   - 목적 : 주조 제품의 불량 검출 (Classification, 클래스 2종)
   - 학습 데이터 : 224x224 이미지, 5만장
     - https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product
+    - 
+<img src="git_images/image_classificaiton.png" height="453" width="633" > 
+
   - 목표 성능치 : 8.8 fps, F1-Score 90%
   - Refercences
     - [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning, 2016](https://arxiv.org/abs/1602.07261)
