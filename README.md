@@ -11,7 +11,7 @@
   - 학습 데이터 : 224x224 이미지, 5만장
     - https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product
     - 
-<img src="git_images/image_classificaiton.png" height="453" width="633" > 
+<img src="git_images/image_classificaiton.png"> 
 
   - 목표 성능치 : 8.8 fps, F1-Score 90%
   - Refercences
