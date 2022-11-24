@@ -10,12 +10,11 @@
   - 목적 : 주조 제품의 불량 검출 (Classification, 클래스 2종)
   - 학습 데이터 : 224x224 이미지, 5만장
     - https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product
-    - 
-<img src="git_images/image_classificaiton.png"> 
-
   - 목표 성능치 : 8.8 fps, F1-Score 90%
   - Refercences
     - [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning, 2016](https://arxiv.org/abs/1602.07261)
+
+  <img src="git_images/image_classificaiton.png"> 
   
 #### 2. ResNet50
   - 목적 : 주조 제품의 불량 검출 (Classification, 클래스 2종)
@@ -24,6 +23,8 @@
   - 목표 성능치 : 28.8 fps, F1-Score 90%
   - Refercences
     - [Deep Residual Learning for Image Recognition, 2015](https://arxiv.org/abs/1512.03385)
+
+  <img src="git_images/image_classificaiton.png"> 
 
 ## 객체 인식 모델
 
@@ -36,6 +37,8 @@
     - [Deep Residual Learning for Image Recognition, 2015](https://arxiv.org/abs/1512.03385)
     - [SSD: Single Shot MultiBox Detector, 2015](https://arxiv.org/abs/1512.02325)
   
+  <img src="git_images/objectdection.png"> 
+
 #### 4.Yolo3
   - 목적 : 디지털 배전판, 계기판 숫자 인식 (Text recongnition)
   - 학습 데이터 : 서버실 디지털 온도계, 습도계, 시계
@@ -44,6 +47,8 @@
  - Refercences
     - [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/)
     - [YOLOv3: An Incremental Improvement, 2018](https://arxiv.org/abs/1804.02767)
+
+  <img src="git_images/objectdection.png"> 
 
 ## 이미지 분할 모델 (Image Segmentation)
 
@@ -55,6 +60,9 @@
  - Refercences
     - [U-Net: Convolutional Networks for Biomedical Image Segmentation, 2015](https://arxiv.org/abs/1505.04597)
 
+  <img src="git_images/unet1.png"> 
+  <img src="git_images/unet2.png"> 
+
 ## 시계열 분류 모델
 
 #### 6. Pytorch 기반 LSTM
@@ -63,8 +71,12 @@
     - https://aihub.or.kr/aihubdata/data/view.do?currMenu=116&topMenu=100&aihubDataSe=ty&dataSetSn=238
   - 목표 성능치 : F1-Score 90% 
   
+  <img src="git_images/lstm.png"> 
+
 #### 7. Pytorch 기반 RNN
   - 목적 : 3상 모터의 진동 데이터 기반 이상 감지 (Classification, 클래스 5종)
   - 학습 데이터 : 지하철 환풍구 3상모터의 진동 데이터 
     - https://aihub.or.kr/aihubdata/data/view.do?currMenu=116&topMenu=100&aihubDataSe=ty&dataSetSn=238
   - 목표 성능치 : F1-Score 90%
+
+  <img src="git_images/rnn.png"> 
