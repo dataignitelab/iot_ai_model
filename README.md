@@ -65,7 +65,7 @@
 
 ## 시계열 분류 모델
 
-#### 6. Pytorch 기반 LSTM
+#### 6. LSTM
   - 목적 : 3상 모터의 전류 데이터 기반 이상 감지 (Classification, 클래스 5종)
   - 학습 데이터 : 지하철 환풍구 3상모터의 전류 데이터 
     - https://aihub.or.kr/aihubdata/data/view.do?currMenu=116&topMenu=100&aihubDataSe=ty&dataSetSn=238
@@ -73,7 +73,7 @@
   
   <img src="git_images/lstm.png"> 
 
-#### 7. Pytorch 기반 RNN
+#### 7. RNN
   - 목적 : 3상 모터의 진동 데이터 기반 이상 감지 (Classification, 클래스 5종)
   - 학습 데이터 : 지하철 환풍구 3상모터의 진동 데이터 
     - https://aihub.or.kr/aihubdata/data/view.do?currMenu=116&topMenu=100&aihubDataSe=ty&dataSetSn=238
