@@ -48,7 +48,7 @@
     - [YOLO: Real-Time Object Detection](https://pjreddie.com/darknet/yolo/)
     - [YOLOv3: An Incremental Improvement, 2018](https://arxiv.org/abs/1804.02767)
 
-  <img src="git_images/objectdection.png" width="400"> 
+  <img src="git_images/objectdection.png" width="400">  
 
 ## 이미지 분할 모델 (Image Segmentation)
 
