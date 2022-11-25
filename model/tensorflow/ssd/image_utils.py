@@ -188,38 +188,6 @@ def padding(img, boxes = None, constant_values = 144, pad_type = 'constant'):
 
 #     return patch[0], ious[0]
 
-def random_resize(img, boxes):
-    w, h = img.size
-    xy1_gap = min(min(boxes[:, 0]), min(boxes[:, 1]))
-    xy2_gap = min(min(w - boxes[:, 2]), min(h - boxes[:, 3]))
-    gap = min(xy1_gap, xy2_gap)
-
-    # zoom in
-    if random.random() < 0.5:
-        ratio = random.uniform(0.1, 0.9)
-        gap = gap * ratio
-
-        pixel_x = int(w * gap)
-        pixel_y = int(h * gap)
-        
-        img = img.crop((pixel_x, pixel_y, w-pixel_y, h-pixel_y))
-        pixel_x = - pixel_x
-        pixel_y = - pixel_y
-    else: # zoom out
-        ratio = random.uniform(0.1, 0.5)
-        gap = gap * ratio
-
-        pixel_x = int(w * gap)
-        pixel_y = int(h * gap)
-        
-        np_img = np.array(img)
-        np_img = np.pad(np_img, ((pixel_y, pixel_y), (pixel_x,pixel_x), (0,0)), mode='reflect')
-        img = Image.fromarray(np_img)
-        
-    new_w, new_h = img.size
-    boxes = (boxes * [w, h, w, h] + [pixel_x, pixel_y, pixel_x, pixel_y]) / [new_w, new_h, new_w, new_h]    
-    return img, boxes
-
 def random_brightness(img, factor = (0.5, 1.7)):
     enhancer = ImageEnhance.Brightness(img)
 
@@ -232,6 +200,26 @@ def random_brightness(img, factor = (0.5, 1.7)):
     img = enhancer.enhance(factor)
 
     return img
+
+def random_zoomout(img, boxes):
+    w, h = img.size
+    xy1_gap = min(min(boxes[:, 0]), min(boxes[:, 1]))
+    xy2_gap = min(min(w - boxes[:, 2]), min(h - boxes[:, 3]))
+    gap = min(xy1_gap, xy2_gap)
+
+    ratio = random.uniform(0.1, 0.5)
+    gap = gap * ratio
+
+    pixel_x = int(w * gap)
+    pixel_y = int(h * gap)
+    
+    np_img = np.array(img)
+    np_img = np.pad(np_img, ((pixel_y, pixel_y), (pixel_x,pixel_x), (0,0)), mode='reflect')
+    img = Image.fromarray(np_img)
+    
+    new_w, new_h = img.size
+    boxes = (boxes * [w, h, w, h] + [pixel_x, pixel_y, pixel_x, pixel_y]) / [new_w, new_h, new_w, new_h]    
+    return img, boxes
 
 def random_zoomin(img, boxes, max_ratio = 0.8):
     # radio = random.uniform(0.05, 0.95)
