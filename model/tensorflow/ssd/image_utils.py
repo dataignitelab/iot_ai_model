@@ -233,6 +233,54 @@ def random_brightness(img, factor = (0.5, 1.7)):
 
     return img
 
+def random_zoomin(img, boxes, max_ratio = 0.8):
+    # radio = random.uniform(0.05, 0.95)
+    w, h = img.size
+    # print(w,h)
+    boxes = boxes * [w, h, w, h]
+    img = np.array(img)
+    
+    box_x1 = min(boxes[:, 0])
+    box_y1 = min(boxes[:, 1])
+    box_x2 = max(boxes[:, 2])
+    box_y2 = max(boxes[:, 3])
+    
+    box_w = box_x2 - box_x1
+    box_h = box_y2 - box_y1
+    
+    if box_w > box_h:
+        ratio = box_w / w
+    else:
+        ratio = box_h / h
+        
+    ratio = random.uniform(ratio, max(ratio, max_ratio))
+    
+    new_w = (w * ratio)
+    new_img_x1 = random.uniform(max(box_x2 - new_w, 0), box_x1)
+    new_img_x2 = new_img_x1 + new_w
+    
+    new_h = (h * ratio)
+    new_img_y1 = random.uniform(max(box_y2 - new_h, 0), box_y1)
+    new_img_y2 = new_img_y1 + new_h
+    
+    new_boxes = boxes - [new_img_x1, new_img_y1, new_img_x1, new_img_y1]
+    new_img_y1, new_img_y2, new_img_x1, new_img_x2 = int(new_img_y1), int(new_img_y2), int(new_img_x1), int(new_img_x2)
+
+    new_img = img[new_img_y1:new_img_y2, new_img_x1:new_img_x2, :]
+    
+    # cv_img =cv2.cvtColor(new_img, cv2.COLOR_RGB2BGR)
+    
+    # for box in new_boxes:
+    #     print(box)
+    #     box = box.astype(np.int)
+    #     output_img = cv2.rectangle(cv_img, (box[0], box[1]), (box[2], box[3]), (0,0,255), 2)
+    # plt.figure(figsize=(10, 10))
+    # plt.imshow(output_img)
+    # plt.show()
+
+    new_boxes = new_boxes / [new_w, new_h, new_w, new_h]
+    new_img = Image.fromarray(new_img)
+    return new_img, new_boxes
 
 def random_translate(img, boxes):
     w, h = img.size
@@ -259,6 +307,14 @@ def random_translate(img, boxes):
     boxes = (boxes + [left - new_x, top - new_y, left - new_x, top - new_y]) / [w, h, w, h]
     return img, boxes
 
+def random_shuffle_rgb(img):
+    np_img = np.array(img)
+    if np.random.random() > 0.5: # BGR
+        np_img = np_img[:,:,[2,1,0]]
+    else: # GRB
+        np_img = np_img[:,:,[1,0,2]]
+    img = Image.fromarray(np_img)
+    return img
 
 def random_patching(img, boxes, labels):
     """ Function to apply random patching

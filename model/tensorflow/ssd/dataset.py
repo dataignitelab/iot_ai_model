@@ -91,7 +91,7 @@ class VOCDataset():
             boxes: numpy array of shape (num_gt, 4)
             labels: numpy array of shape (num_gt,)
         """
-        h, w = orig_shape
+        w, h = orig_shape
         # filename = self.ids[index]
         # anno_path = os.path.join(self.anno_dir, filename + '.xml')
         # objects = ET.parse(anno_path).findall('object')
@@ -135,8 +135,7 @@ class VOCDataset():
             # img, orig_shape = self._get_image(index)
             filename = indices[index]
             org_img = self._get_image(index)
-            w, h = org_img.size
-            boxes, labels = self._get_annotation(index, (h, w))
+            boxes, labels = self._get_annotation(index, org_img.size)
 
             if self.augmentation and random.random() < 0.5:
                 org_img = random_brightness(org_img)  
