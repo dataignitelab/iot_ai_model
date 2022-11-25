@@ -7,7 +7,7 @@ import random
 
 from box_utils import compute_target 
 from box_utils_numpy import compute_target as compute_target_numpy
-from image_utils import random_resize, random_translate, random_brightness, padding
+from image_utils import random_resize, random_translate, random_brightness, padding, random_zoomout, random_zoomin, random_shuffle_rgb
 from functools import partial
 
 
@@ -142,14 +142,19 @@ class VOCDataset():
             
             img, boxes = padding(org_img, boxes)
             
-            # img = org_img
-            
             if self.augmentation :
                 if random.random() < 0.5:
-                    img, boxes = random_resize(img, boxes)
+                    if random.random() < 0.5:
+                        img, boxes = random_zoomout(img, boxes)
+                    else:
+                        img, boxes = random_zoomin(img, boxes)
+
+                if random.random() < 0.5:
+                    img = random_shuffle_rgb(img)
+                         
                 if random.random() < 0.5:
                     img, boxes = random_translate(img, boxes)
-                  
+                
             
             # augmentation_method = np.random.choice(self.augmentation)
             # if augmentation_method == 'patch':
