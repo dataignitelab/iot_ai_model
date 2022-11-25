@@ -7,7 +7,7 @@ import random
 
 from box_utils import compute_target 
 from box_utils_numpy import compute_target as compute_target_numpy
-from image_utils import random_resize, random_translate, random_brightness, padding, random_zoomout, random_zoomin, random_shuffle_rgb
+from image_utils import random_translate, random_brightness, padding, random_zoomout, random_zoomin, random_shuffle_rgb
 from functools import partial
 
 
